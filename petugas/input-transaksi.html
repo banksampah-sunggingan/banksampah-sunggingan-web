@@ -65,7 +65,7 @@
           </div>
           <h2 class="text-xl font-bold text-hijau-800 mb-2">Belum Ada Sesi Setor</h2>
           <p class="text-gray-600 text-sm mb-6">
-            Mulai sesi setor untuk mulai menerima setoran nasabah hari ini.
+            Sebelum menerima setoran, mulai sesi setor untuk hari ini.
           </p>
           <button id="btnMulaiSesi" class="bg-hijau-500 hover:bg-hijau-600 text-white font-bold px-6 py-3.5 rounded-xl transition text-base w-full max-w-xs disabled:opacity-50">
             MULAI SESI SETOR
@@ -80,7 +80,7 @@
         </div>
       </div>
 
-      <!-- STATE B: Sesi open, form input -->
+      <!-- STATE B: Sesi open, form input (SEMUA STEP VISIBLE) -->
       <div id="stateSesiOpen" class="hidden">
 
         <!-- Session info bar -->
@@ -95,17 +95,17 @@
         </div>
 
         <!-- Step 1: Pilih Nasabah -->
-        <div id="stepNasabah" class="bg-white rounded-xl p-4 shadow-sm border border-hijau-100 mb-4">
-          <div class="flex items-center gap-2 mb-2">
-            <div class="w-6 h-6 bg-hijau-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
-            <label class="text-sm font-bold text-gray-700">Pilih Nasabah</label>
+        <div class="bg-white rounded-xl p-4 shadow-sm border-2 border-hijau-300 mb-4">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="w-7 h-7 bg-hijau-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
+            <label class="text-base font-bold text-gray-800">Pilih Nasabah</label>
           </div>
 
           <div class="relative">
             <input
               type="text"
               id="nasabahSearch"
-              placeholder="Ketik nama nasabah..."
+              placeholder="Ketik nama nasabah, atau klik untuk pilih..."
               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hijau-500 focus:border-hijau-500 text-base"
               autocomplete="off"
             >
@@ -115,37 +115,49 @@
           </div>
 
           <!-- Selected nasabah display -->
-          <div id="selectedNasabahDisplay" class="hidden mt-3 p-3 bg-hijau-50 border border-hijau-200 rounded-lg flex items-center justify-between">
+          <div id="selectedNasabahDisplay" class="hidden mt-3 p-3 bg-hijau-50 border-2 border-hijau-300 rounded-lg flex items-center justify-between">
             <div>
-              <div class="font-bold text-hijau-800" id="selectedNasabahName">-</div>
+              <div class="text-xs text-hijau-700 font-semibold mb-0.5">✓ NASABAH TERPILIH</div>
+              <div class="font-bold text-hijau-800 text-base" id="selectedNasabahName">-</div>
               <div class="text-xs text-hijau-700" id="selectedNasabahMeta">-</div>
             </div>
-            <button id="btnGantiNasabah" class="text-hijau-700 hover:text-hijau-800 text-sm font-semibold px-2 py-1">
+            <button id="btnGantiNasabah" class="text-hijau-700 hover:text-hijau-800 text-sm font-semibold px-3 py-2 bg-white rounded-lg border border-hijau-300">
               Ganti
             </button>
           </div>
         </div>
 
-        <!-- Step 2: Pilih Jenis Sampah -->
-        <div id="stepJenisSampah" class="hidden bg-white rounded-xl p-4 shadow-sm border border-hijau-100 mb-4">
+        <!-- Step 2: Pilih Jenis Sampah (SELALU VISIBLE) -->
+        <div id="stepJenisSampah" class="bg-white rounded-xl p-4 shadow-sm border border-hijau-100 mb-4 transition-all">
           <div class="flex items-center gap-2 mb-3">
-            <div class="w-6 h-6 bg-hijau-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
-            <label class="text-sm font-bold text-gray-700">Tap Jenis Sampah untuk Menambah</label>
+            <div id="step2Number" class="w-7 h-7 bg-gray-300 text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
+            <label id="step2Label" class="text-base font-bold text-gray-500">Pilih Jenis Sampah</label>
+          </div>
+
+          <!-- Helper text ketika belum pilih nasabah -->
+          <div id="jenisHelperText" class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3 text-sm text-yellow-800">
+            ⓘ Pilih nasabah dulu di kotak nomor 1 sebelum mulai memilih sampah.
           </div>
 
           <div id="jenisSampahGrid" class="grid grid-cols-2 gap-2"></div>
         </div>
 
-        <!-- Step 3: Keranjang -->
-        <div id="stepKeranjang" class="hidden bg-white rounded-xl p-4 shadow-sm border-2 border-hijau-300 mb-4">
+        <!-- Step 3: Keranjang (SELALU VISIBLE, tapi empty state kalau kosong) -->
+        <div id="stepKeranjang" class="bg-white rounded-xl p-4 shadow-sm border border-hijau-100 mb-4 transition-all">
           <div class="flex items-center gap-2 mb-3">
-            <div class="w-6 h-6 bg-hijau-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
-            <label class="text-sm font-bold text-gray-700">Keranjang Setoran</label>
+            <div id="step3Number" class="w-7 h-7 bg-gray-300 text-white rounded-full flex items-center justify-center text-sm font-bold">3</div>
+            <label id="step3Label" class="text-base font-bold text-gray-500">Keranjang Setoran</label>
           </div>
 
-          <div id="keranjangList" class="space-y-2 mb-3"></div>
+          <!-- Empty state -->
+          <div id="keranjangEmpty" class="text-center py-6 text-gray-400 text-sm">
+            <div class="text-3xl mb-2">🧺</div>
+            <p>Keranjang masih kosong.<br>Tap jenis sampah di atas untuk menambah.</p>
+          </div>
 
-          <div class="pt-3 border-t-2 border-hijau-200 flex items-center justify-between">
+          <div id="keranjangList" class="hidden space-y-2 mb-3"></div>
+
+          <div id="keranjangFooter" class="hidden pt-3 border-t-2 border-hijau-200 flex items-center justify-between">
             <span class="text-sm font-semibold text-gray-600">TOTAL:</span>
             <span class="text-2xl font-bold text-hijau-700" id="grandTotal">Rp 0</span>
           </div>
@@ -155,7 +167,7 @@
 
     </main>
 
-    <!-- Fixed bottom action bar (only when keranjang has items) -->
+    <!-- Fixed bottom action bar -->
     <div id="bottomActions" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-3 z-30">
       <div class="max-w-4xl mx-auto flex gap-2">
         <button id="btnBatal" class="px-4 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition text-sm">
@@ -213,7 +225,7 @@
     let allNasabah = [];
     let allJenisSampah = [];
     let selectedNasabah = null;
-    let keranjang = []; // { jenis_sampah_id, jenis_nama, jumlah, satuan, harga }
+    let keranjang = [];
 
     // ==== INIT ====
     async function init() {
@@ -236,10 +248,7 @@
       document.getElementById('bankSampahName').textContent = 'Bank Sampah ' + petugas.bank_sampah.nama + ' · RW ' + petugas.bank_sampah.rw;
       document.getElementById('sesiDateInfo').textContent = 'Hari ini: ' + formatTanggal(new Date().toISOString());
 
-      // Cek sesi setor yang open
       await loadCurrentSesi();
-
-      // Load data pendukung
       await Promise.all([loadNasabah(), loadJenisSampah()]);
 
       document.getElementById('loadingState').classList.add('hidden');
@@ -249,42 +258,35 @@
     }
 
     async function loadCurrentSesi() {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('sesi_setor')
         .select('*')
         .eq('bank_sampah_id', currentPetugas.bank_sampah.id)
         .eq('status', 'open')
         .limit(1)
         .maybeSingle();
-
-      if (!error && data) {
-        currentSesi = data;
-      } else {
-        currentSesi = null;
-      }
+      currentSesi = data || null;
     }
 
     async function loadNasabah() {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('nasabah')
         .select('*')
         .eq('bank_sampah_id', currentPetugas.bank_sampah.id)
         .is('deleted_at', null)
         .order('is_default', { ascending: false })
         .order('nama', { ascending: true });
-
       allNasabah = data || [];
     }
 
     async function loadJenisSampah() {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('jenis_sampah')
         .select('*')
         .eq('bank_sampah_id', currentPetugas.bank_sampah.id)
         .eq('aktif', true)
         .is('deleted_at', null)
         .order('urutan', { ascending: true });
-
       allJenisSampah = data || [];
     }
 
@@ -324,6 +326,8 @@
         stateSesiOpen.classList.remove('hidden');
         document.getElementById('sesiActiveInfo').textContent = formatTanggal(currentSesi.tanggal);
         renderJenisSampahGrid();
+        // Focus ke search nasabah otomatis
+        setTimeout(() => document.getElementById('nasabahSearch')?.focus(), 200);
       }
     }
 
@@ -362,40 +366,59 @@
     const nasabahSearch = document.getElementById('nasabahSearch');
     const nasabahDropdown = document.getElementById('nasabahDropdown');
 
+    // Klik search box (tanpa ketik) tampilkan semua nasabah
+    nasabahSearch.addEventListener('focus', () => {
+      if (nasabahSearch.value.trim().length === 0) {
+        showAllNasabah();
+      }
+    });
+
     nasabahSearch.addEventListener('input', () => {
       const q = nasabahSearch.value.trim().toLowerCase();
       if (q.length < 1) {
-        nasabahDropdown.classList.add('hidden');
+        showAllNasabah();
         return;
       }
+      showFilteredNasabah(q);
+    });
 
-      const filtered = allNasabah
-        .filter(n => n.nama.toLowerCase().includes(q))
-        .slice(0, 10);
+    function showAllNasabah() {
+      nasabahDropdown.innerHTML = '';
+      
+      if (allNasabah.length === 0) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'w-full text-left px-4 py-3 hover:bg-hijau-50';
+        btn.innerHTML = '<div class="font-semibold text-hijau-700 text-sm">+ Tambah nasabah pertama</div>';
+        btn.addEventListener('click', () => openQuickAdd(''));
+        nasabahDropdown.appendChild(btn);
+      } else {
+        allNasabah.slice(0, 20).forEach(n => nasabahDropdown.appendChild(makeNasabahOption(n)));
+        
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'w-full text-left px-4 py-3 hover:bg-hijau-50 border-t-2 border-hijau-100 bg-hijau-50 font-semibold text-hijau-700 text-sm';
+        addBtn.textContent = '+ Tambah nasabah baru';
+        addBtn.addEventListener('click', () => openQuickAdd(''));
+        nasabahDropdown.appendChild(addBtn);
+      }
+      
+      nasabahDropdown.classList.remove('hidden');
+    }
 
+    function showFilteredNasabah(q) {
+      const filtered = allNasabah.filter(n => n.nama.toLowerCase().includes(q)).slice(0, 10);
       nasabahDropdown.innerHTML = '';
       
       if (filtered.length === 0) {
-        nasabahDropdown.innerHTML = `
-          <button type="button" id="btnQuickAddFromSearch" class="w-full text-left px-4 py-3 hover:bg-hijau-50 border-b border-gray-100">
-            <div class="font-semibold text-hijau-700 text-sm">+ Tambah "${escapeHtml(nasabahSearch.value.trim())}" sebagai nasabah baru</div>
-          </button>
-        `;
-        document.getElementById('btnQuickAddFromSearch').addEventListener('click', () => openQuickAdd(nasabahSearch.value.trim()));
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'w-full text-left px-4 py-3 hover:bg-hijau-50';
+        btn.innerHTML = `<div class="font-semibold text-hijau-700 text-sm">+ Tambah "${escapeHtml(nasabahSearch.value.trim())}" sebagai nasabah baru</div>`;
+        btn.addEventListener('click', () => openQuickAdd(nasabahSearch.value.trim()));
+        nasabahDropdown.appendChild(btn);
       } else {
-        filtered.forEach(n => {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'w-full text-left px-4 py-3 hover:bg-hijau-50 border-b border-gray-100 last:border-b-0';
-          btn.innerHTML = `
-            <div class="font-semibold text-gray-800 text-sm">${escapeHtml(n.nama)}</div>
-            <div class="text-xs text-gray-500">${n.is_default ? 'Default · ' : ''}${n.rt ? 'RT ' + escapeHtml(n.rt) : '-'}${n.dawis ? ' · ' + escapeHtml(n.dawis) : ''}</div>
-          `;
-          btn.addEventListener('click', () => selectNasabah(n));
-          nasabahDropdown.appendChild(btn);
-        });
-
-        // Selalu kasih opsi tambah baru
+        filtered.forEach(n => nasabahDropdown.appendChild(makeNasabahOption(n)));
         const addBtn = document.createElement('button');
         addBtn.type = 'button';
         addBtn.className = 'w-full text-left px-4 py-3 hover:bg-hijau-50 border-t-2 border-hijau-100 bg-hijau-50 font-semibold text-hijau-700 text-sm';
@@ -403,9 +426,21 @@
         addBtn.addEventListener('click', () => openQuickAdd(nasabahSearch.value.trim()));
         nasabahDropdown.appendChild(addBtn);
       }
-
+      
       nasabahDropdown.classList.remove('hidden');
-    });
+    }
+
+    function makeNasabahOption(n) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'w-full text-left px-4 py-3 hover:bg-hijau-50 border-b border-gray-100 last:border-b-0';
+      btn.innerHTML = `
+        <div class="font-semibold text-gray-800 text-sm">${escapeHtml(n.nama)}</div>
+        <div class="text-xs text-gray-500">${n.is_default ? 'Default · ' : ''}${n.rt ? 'RT ' + escapeHtml(n.rt) : '-'}${n.dawis ? ' · ' + escapeHtml(n.dawis) : ''}</div>
+      `;
+      btn.addEventListener('click', () => selectNasabah(n));
+      return btn;
+    }
 
     // Close dropdown on outside click
     document.addEventListener('click', (e) => {
@@ -427,8 +462,8 @@
         (n.rt ? 'RT ' + n.rt : '-') +
         (n.dawis ? ' · ' + n.dawis : '');
 
-      // Show jenis sampah step
-      document.getElementById('stepJenisSampah').classList.remove('hidden');
+      // Enable Step 2 (aktifin visual)
+      enableStep2();
     }
 
     document.getElementById('btnGantiNasabah').addEventListener('click', resetNasabah);
@@ -438,12 +473,36 @@
       keranjang = [];
       nasabahSearch.classList.remove('hidden');
       nasabahSearch.value = '';
-      nasabahSearch.focus();
       document.getElementById('selectedNasabahDisplay').classList.add('hidden');
-      document.getElementById('stepJenisSampah').classList.add('hidden');
-      document.getElementById('stepKeranjang').classList.add('hidden');
-      document.getElementById('bottomActions').classList.add('hidden');
+      disableStep2();
       renderKeranjang();
+      nasabahSearch.focus();
+    }
+
+    // ==== STEP 2 STATE (enabled/disabled visual) ====
+    function enableStep2() {
+      document.getElementById('step2Number').classList.remove('bg-gray-300');
+      document.getElementById('step2Number').classList.add('bg-hijau-500');
+      document.getElementById('step2Label').classList.remove('text-gray-500');
+      document.getElementById('step2Label').classList.add('text-gray-800');
+      document.getElementById('jenisHelperText').classList.add('hidden');
+      // Enable semua jenis sampah buttons
+      document.querySelectorAll('.jenis-btn').forEach(btn => {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+      });
+    }
+
+    function disableStep2() {
+      document.getElementById('step2Number').classList.add('bg-gray-300');
+      document.getElementById('step2Number').classList.remove('bg-hijau-500');
+      document.getElementById('step2Label').classList.add('text-gray-500');
+      document.getElementById('step2Label').classList.remove('text-gray-800');
+      document.getElementById('jenisHelperText').classList.remove('hidden');
+      document.querySelectorAll('.jenis-btn').forEach(btn => {
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+      });
     }
 
     // ==== JENIS SAMPAH GRID ====
@@ -459,12 +518,19 @@
       allJenisSampah.forEach(js => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'p-3 border-2 border-hijau-200 rounded-lg hover:border-hijau-500 hover:bg-hijau-50 transition text-left active:scale-95';
+        btn.disabled = true; // disabled until nasabah selected
+        btn.className = 'jenis-btn p-3 border-2 border-hijau-200 rounded-lg hover:border-hijau-500 hover:bg-hijau-50 transition text-left active:scale-95 opacity-50 cursor-not-allowed';
         btn.innerHTML = `
           <div class="font-bold text-hijau-800 text-sm">${escapeHtml(js.nama)}</div>
           <div class="text-xs text-hijau-600 mt-0.5">${formatRp(js.harga_default)}/${js.satuan_default}</div>
         `;
-        btn.addEventListener('click', () => addToKeranjang(js));
+        btn.addEventListener('click', () => {
+          if (!selectedNasabah) {
+            showToast('Pilih nasabah dulu di kotak nomor 1', 'error', 2500);
+            return;
+          }
+          addToKeranjang(js);
+        });
         grid.appendChild(btn);
       });
     }
@@ -482,16 +548,33 @@
 
     function renderKeranjang() {
       const list = document.getElementById('keranjangList');
+      const empty = document.getElementById('keranjangEmpty');
+      const footer = document.getElementById('keranjangFooter');
+      const step3Number = document.getElementById('step3Number');
+      const step3Label = document.getElementById('step3Label');
+
       list.innerHTML = '';
 
       if (keranjang.length === 0) {
-        document.getElementById('stepKeranjang').classList.add('hidden');
+        empty.classList.remove('hidden');
+        list.classList.add('hidden');
+        footer.classList.add('hidden');
         document.getElementById('bottomActions').classList.add('hidden');
+        step3Number.classList.add('bg-gray-300');
+        step3Number.classList.remove('bg-hijau-500');
+        step3Label.classList.add('text-gray-500');
+        step3Label.classList.remove('text-gray-800');
         return;
       }
 
-      document.getElementById('stepKeranjang').classList.remove('hidden');
+      empty.classList.add('hidden');
+      list.classList.remove('hidden');
+      footer.classList.remove('hidden');
       document.getElementById('bottomActions').classList.remove('hidden');
+      step3Number.classList.remove('bg-gray-300');
+      step3Number.classList.add('bg-hijau-500');
+      step3Label.classList.remove('text-gray-500');
+      step3Label.classList.add('text-gray-800');
 
       keranjang.forEach((item, idx) => {
         const row = document.createElement('div');
@@ -523,7 +606,6 @@
         list.appendChild(row);
       });
 
-      // Attach handlers
       list.querySelectorAll('.btn-remove').forEach(btn => {
         btn.addEventListener('click', () => {
           keranjang.splice(Number(btn.dataset.idx), 1);
@@ -540,8 +622,8 @@
       });
 
       // Auto-focus ke input jumlah baris terakhir yang jumlahnya masih kosong
-      const lastEmpty = list.querySelectorAll('input[data-field="jumlah"]');
-      for (const inp of lastEmpty) {
+      const inputs = list.querySelectorAll('input[data-field="jumlah"]');
+      for (const inp of inputs) {
         if (!inp.value) { setTimeout(() => inp.focus(), 100); break; }
       }
 
@@ -564,7 +646,6 @@
     async function simpanSetoran() {
       if (!selectedNasabah || keranjang.length === 0) return;
 
-      // Validasi
       for (const item of keranjang) {
         if (!item.jumlah || Number(item.jumlah) <= 0) {
           showToast('Ada item dengan jumlah kosong atau 0. Cek keranjang.', 'error', 3000);
@@ -583,7 +664,6 @@
       const today = new Date().toISOString().split('T')[0];
 
       try {
-        // Step 1: Insert setoran
         const { data: setoran, error: setoranErr } = await supabase
           .from('setoran')
           .insert({
@@ -598,7 +678,6 @@
 
         if (setoranErr) throw setoranErr;
 
-        // Step 2: Insert transaksi (batch)
         const transaksiRows = keranjang.map(item => ({
           setoran_id: setoran.id,
           bank_sampah_id: currentPetugas.bank_sampah.id,
@@ -616,14 +695,12 @@
           .insert(transaksiRows);
 
         if (transaksiErr) {
-          // Rollback: hapus setoran
           await supabase.from('setoran').delete().eq('id', setoran.id);
           throw transaksiErr;
         }
 
         showToast(`Tersimpan: ${keranjang.length} item, ${formatRp(keranjang.reduce((s,i) => s + Number(i.jumlah)*Number(i.harga), 0))}`, 'success', 2500);
         resetNasabah();
-        setTimeout(() => nasabahSearch.focus(), 300);
 
       } catch (err) {
         showToast('Gagal simpan: ' + err.message, 'error', 4000);
@@ -684,21 +761,18 @@
         return;
       }
 
-      // Refresh cache + pilih
       allNasabah.unshift(data);
       closeQuickAdd();
       selectNasabah(data);
       showToast('Nasabah baru ditambahkan', 'success');
     });
 
-    // ==== UTILITY ====
     function escapeHtml(text) {
       const div = document.createElement('div');
       div.textContent = text ?? '';
       return div.innerHTML;
     }
 
-    // ==== BINDINGS ====
     document.getElementById('btnMulaiSesi').addEventListener('click', mulaiSesi);
 
     init();
