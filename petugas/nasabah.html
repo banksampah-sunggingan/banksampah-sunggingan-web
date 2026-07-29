@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kelola Nasabah · Bank Sampah Sunggingan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { 'sans': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'] },
+          colors: {
+            'hijau': {
+              50: '#F1F8F3', 100: '#DFF0E4', 200: '#B7DDC1', 300: '#8AC59A',
+              400: '#5FA773', 500: '#3A7D44', 600: '#2D5F3F', 700: '#254D33',
+              800: '#1E3F2A', 900: '#183321',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="font-sans bg-hijau-50 min-h-screen">
+
+  <div id="loadingState" class="min-h-screen flex items-center justify-center">
+    <div class="text-center">
+      <div class="w-12 h-12 border-4 border-hijau-200 border-t-hijau-500 rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-hijau-700 font-medium">Memuat data...</p>
+    </div>
+  </div>
+
+  <div id="mainContent" class="hidden pb-24">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-hijau-100 sticky top-0 z-40">
+      <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="/petugas/dashboard.html" class="text-hijau-700 hover:text-hijau-800 p-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </a>
+          <div>
+            <div class="font-bold text-hijau-800 text-base">Kelola Nasabah</div>
+            <div class="text-hijau-600 text-xs" id="bankSampahName">-</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-4">
+
+      <!-- Info banner -->
+      <div class="bg-hijau-100 border border-hijau-200 rounded-xl p-3 mb-4 text-sm text-hijau-800">
+        <span id="totalCounter" class="font-bold">0</span> nasabah aktif terdaftar
+      </div>
+
+      <!-- Search + Filter -->
+      <div class="bg-white rounded-xl p-3 mb-4 shadow-sm border border-hijau-100">
+        <div class="mb-3">
+          <label class="text-xs font-semibold text-gray-600 mb-1 block">Cari Nasabah</label>
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Ketik nama nasabah..."
+            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hijau-500 focus:border-hijau-500 text-sm"
+          >
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-gray-600 mb-1 block">Filter RT</label>
+          <select id="filterRT" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hijau-500 focus:border-hijau-500 text-sm">
+            <option value="">Semua RT</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Nasabah list -->
+      <div id="nasabahList" class="space-y-2"></div>
+
+      <!-- Empty state -->
+      <div id="emptyState" class="hidden bg-white rounded-xl p-8 text-center shadow-sm border border-hijau-100">
+        <div class="text-gray-400 text-4xl mb-3">👥</div>
+        <p class="text-gray-600 font-medium mb-1">Belum ada nasabah</p>
+        <p class="text-gray-500 text-sm">Klik tombol + di bawah untuk menambah nasabah baru</p>
+      </div>
+
+      <!-- No results state -->
+      <div id="noResultsState" class="hidden bg-white rounded-xl p-8 text-center shadow-sm border border-hijau-100">
+        <p class="text-gray-600">Tidak ada nasabah yang cocok dengan pencarian.</p>
+      </div>
+
+    </main>
+
+    <!-- Floating Add Button -->
+    <button
+      id="btnAddNasabah"
+      class="fixed bottom-6 right-6 bg-hijau-500 hover:bg-hijau-600 text-white rounded-full w-14 h-14 shadow-lg flex items-center justify-center z-30 transition"
+      aria-label="Tambah Nasabah"
+    >
+      <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+      </svg>
+    </button>
+
+  </div>
+
+  <!-- Modal Tambah/Edit Nasabah -->
+  <div id="modalForm" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-hijau-800" id="modalFormTitle">Tambah Nasabah</h2>
+        <button type="button" id="btnCloseForm" class="text-gray-500 hover:text-gray-700 p-1">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <form id="nasabahForm" class="space-y-3">
+        <input type="hidden" id="nasabahId" value="">
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">
+            Nama Nasabah <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="fNama"
+            required
+            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hijau-500 text-sm"
+          >
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">
+              RT <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="fRT"
+              required
+              placeholder="01"
+              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hijau-500 text-sm"
+            >
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">RW</label>
+            <input
+              type="text"
+              id="fRW"
+              readonly
+              class="w-full px-3 py-2.5 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-600"
+            >
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Dawis <span class="text-gray-400 font-normal">(opsional)</span></label>
+          <input
+            type="text"
+            id="fDawis"
+            placeholder="Nama Dawis"
+            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hijau-500 text-sm"
+          >
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">No HP <span class="text-gray-400 font-normal">(opsional)</span></label>
+          <input
+            type="tel"
+            id="fNoHP"
+            placeholder="08xxxxxxxxxx"
+            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hijau-500 text-sm"
+          >
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Alamat <span class="text-gray-400 font-normal">(opsional)</span></label>
+          <textarea
+            id="fAlamat"
+            rows="2"
+            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hijau-500 text-sm"
+          ></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Catatan <span class="text-gray-400 font-normal">(opsional)</span></label>
+          <textarea
+            id="fCatatan"
+            rows="2"
+            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hijau-500 text-sm"
+          ></textarea>
+        </div>
+
+        <div id="formError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm"></div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" id="btnCancelForm" class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition text-sm">
+            Batal
+          </button>
+          <button type="submit" id="btnSaveForm" class="flex-1 py-3 bg-hijau-500 hover:bg-hijau-600 text-white rounded-lg font-semibold transition text-sm disabled:opacity-50">
+            Simpan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Delete Confirmation -->
+  <div id="modalDelete" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-5">
+      <h2 class="text-lg font-bold text-red-700 mb-2">Hapus Nasabah</h2>
+      <p class="text-gray-600 text-sm mb-4">
+        Yakin ingin menghapus nasabah <span class="font-semibold" id="deleteName">-</span>?
+        Data setoran lama tetap tersimpan untuk laporan.
+      </p>
+
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-gray-700 mb-1">
+          Alasan Hapus <span class="text-red-500">*</span>
+        </label>
+        <textarea
+          id="deleteReason"
+          rows="2"
+          required
+          placeholder="Contoh: Nasabah pindah, meninggal dunia, dll"
+          class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+        ></textarea>
+      </div>
+
+      <div id="deleteError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm mb-3"></div>
+
+      <div class="flex gap-2">
+        <button type="button" id="btnCancelDelete" class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition text-sm">
+          Batal
+        </button>
+        <button type="button" id="btnConfirmDelete" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition text-sm disabled:opacity-50">
+          Hapus
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '/shared/config.js';
+    import { formatRp, showToast } from '/shared/utils.js';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
+
+    // State
+    let currentPetugas = null;
+    let allNasabah = [];
+    let allSaldo = {};
+    let currentDeleteId = null;
+
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const { data: petugas, error } = await supabase
+        .from('petugas')
+        .select('*, bank_sampah(*)')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error || !petugas || petugas.role !== 'petugas_rw') {
+        alert('Akses tidak valid.');
+        window.location.href = '/login.html';
+        return;
+      }
+
+      currentPetugas = petugas;
+      document.getElementById('bankSampahName').textContent = 'Bank Sampah ' + petugas.bank_sampah.nama + ' · RW ' + petugas.bank_sampah.rw;
+      document.getElementById('fRW').value = petugas.bank_sampah.rw;
+
+      await loadNasabah();
+
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+    }
+
+    async function loadNasabah() {
+      const bankSampahId = currentPetugas.bank_sampah.id;
+
+      // Fetch nasabah
+      const { data: nasabahData, error: nasabahErr } = await supabase
+        .from('nasabah')
+        .select('*')
+        .eq('bank_sampah_id', bankSampahId)
+        .is('deleted_at', null)
+        .order('is_default', { ascending: false })
+        .order('nama', { ascending: true });
+
+      if (nasabahErr) {
+        showToast('Gagal memuat nasabah: ' + nasabahErr.message, 'error');
+        return;
+      }
+
+      allNasabah = nasabahData || [];
+
+      // Fetch saldo dari view
+      const { data: saldoData } = await supabase
+        .from('view_saldo_nasabah')
+        .select('*')
+        .eq('bank_sampah_id', bankSampahId);
+
+      allSaldo = {};
+      (saldoData || []).forEach(s => {
+        allSaldo[s.nasabah_id] = s;
+      });
+
+      // Populate filter RT
+      const rtSet = new Set();
+      allNasabah.forEach(n => { if (n.rt) rtSet.add(n.rt); });
+      const rtFilter = document.getElementById('filterRT');
+      rtFilter.innerHTML = '<option value="">Semua RT</option>';
+      Array.from(rtSet).sort().forEach(rt => {
+        const opt = document.createElement('option');
+        opt.value = rt;
+        opt.textContent = 'RT ' + rt;
+        rtFilter.appendChild(opt);
+      });
+
+      renderList();
+    }
+
+    function renderList() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+      const filterRT = document.getElementById('filterRT').value;
+
+      const filtered = allNasabah.filter(n => {
+        const matchSearch = !searchTerm || n.nama.toLowerCase().includes(searchTerm);
+        const matchRT = !filterRT || n.rt === filterRT;
+        return matchSearch && matchRT;
+      });
+
+      // Update counter (exclude default nasabah dari hitungan)
+      const totalReal = allNasabah.filter(n => !n.is_default).length;
+      document.getElementById('totalCounter').textContent = totalReal;
+
+      const list = document.getElementById('nasabahList');
+      list.innerHTML = '';
+
+      const emptyState = document.getElementById('emptyState');
+      const noResultsState = document.getElementById('noResultsState');
+
+      if (allNasabah.length === 0 || (allNasabah.length === 1 && allNasabah[0].is_default)) {
+        emptyState.classList.remove('hidden');
+        noResultsState.classList.add('hidden');
+        return;
+      }
+
+      if (filtered.length === 0) {
+        emptyState.classList.add('hidden');
+        noResultsState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      noResultsState.classList.add('hidden');
+
+      filtered.forEach(n => {
+        const saldo = allSaldo[n.id];
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-xl p-4 shadow-sm border border-hijau-100';
+
+        const isDefault = n.is_default;
+        const badgeDefault = isDefault ? '<span class="ml-2 text-xs bg-hijau-100 text-hijau-700 px-2 py-0.5 rounded font-medium">Default</span>' : '';
+        const badgeRT = n.rt ? `<span class="text-xs text-gray-500">RT ${n.rt}${n.dawis ? ' · ' + n.dawis : ''}</span>` : '';
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center flex-wrap gap-1">
+                <h3 class="font-bold text-hijau-800 text-base truncate">${escapeHtml(n.nama)}</h3>
+                ${badgeDefault}
+              </div>
+              <div class="mt-0.5">${badgeRT}</div>
+              ${n.no_hp ? `<div class="text-xs text-gray-500 mt-0.5">📞 ${escapeHtml(n.no_hp)}</div>` : ''}
+              ${saldo && saldo.total_setoran > 0 ? `
+                <div class="mt-2 pt-2 border-t border-gray-100 flex items-center gap-3 text-xs">
+                  <span class="text-gray-500">Setoran: <span class="font-semibold text-gray-700">${saldo.jumlah_setoran}x</span></span>
+                  <span class="text-gray-500">Saldo: <span class="font-semibold text-hijau-700">${formatRp(saldo.saldo)}</span></span>
+                </div>
+              ` : ''}
+            </div>
+            <div class="flex flex-col gap-1 flex-shrink-0">
+              <button data-id="${n.id}" class="btn-edit p-2 text-gray-600 hover:text-hijau-700 hover:bg-hijau-50 rounded-lg transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+              </button>
+              ${!isDefault ? `
+                <button data-id="${n.id}" data-name="${escapeHtml(n.nama)}" class="btn-delete p-2 text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/>
+                  </svg>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+
+      // Attach handlers
+      document.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.addEventListener('click', () => openEditModal(btn.dataset.id));
+      });
+      document.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', () => openDeleteModal(btn.dataset.id, btn.dataset.name));
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text ?? '';
+      return div.innerHTML;
+    }
+
+    // === Modal Form ===
+    function openAddModal() {
+      document.getElementById('modalFormTitle').textContent = 'Tambah Nasabah';
+      document.getElementById('nasabahId').value = '';
+      document.getElementById('fNama').value = '';
+      document.getElementById('fRT').value = '';
+      document.getElementById('fDawis').value = '';
+      document.getElementById('fNoHP').value = '';
+      document.getElementById('fAlamat').value = '';
+      document.getElementById('fCatatan').value = '';
+      hideFormError();
+      document.getElementById('modalForm').classList.remove('hidden');
+      setTimeout(() => document.getElementById('fNama').focus(), 100);
+    }
+
+    function openEditModal(id) {
+      const n = allNasabah.find(x => x.id === id);
+      if (!n) return;
+      document.getElementById('modalFormTitle').textContent = 'Edit Nasabah';
+      document.getElementById('nasabahId').value = n.id;
+      document.getElementById('fNama').value = n.nama || '';
+      document.getElementById('fRT').value = n.rt || '';
+      document.getElementById('fDawis').value = n.dawis || '';
+      document.getElementById('fNoHP').value = n.no_hp || '';
+      document.getElementById('fAlamat').value = n.alamat || '';
+      document.getElementById('fCatatan').value = n.catatan || '';
+      hideFormError();
+      document.getElementById('modalForm').classList.remove('hidden');
+      setTimeout(() => document.getElementById('fNama').focus(), 100);
+    }
+
+    function closeFormModal() {
+      document.getElementById('modalForm').classList.add('hidden');
+    }
+
+    function showFormError(msg) {
+      const el = document.getElementById('formError');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+    function hideFormError() {
+      document.getElementById('formError').classList.add('hidden');
+    }
+
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      hideFormError();
+
+      const id = document.getElementById('nasabahId').value;
+      const nama = document.getElementById('fNama').value.trim();
+      const rt = document.getElementById('fRT').value.trim();
+      const dawis = document.getElementById('fDawis').value.trim();
+      const noHp = document.getElementById('fNoHP').value.trim();
+      const alamat = document.getElementById('fAlamat').value.trim();
+      const catatan = document.getElementById('fCatatan').value.trim();
+
+      if (!nama) return showFormError('Nama nasabah wajib diisi.');
+      if (!rt) return showFormError('RT wajib diisi.');
+
+      const btnSave = document.getElementById('btnSaveForm');
+      btnSave.disabled = true;
+      btnSave.textContent = 'Menyimpan...';
+
+      const payload = {
+        nama,
+        rt,
+        rw: String(currentPetugas.bank_sampah.rw),
+        dawis: dawis || null,
+        no_hp: noHp || null,
+        alamat: alamat || null,
+        catatan: catatan || null,
+        bank_sampah_id: currentPetugas.bank_sampah.id,
+      };
+
+      try {
+        if (id) {
+          // UPDATE
+          const { error } = await supabase
+            .from('nasabah')
+            .update(payload)
+            .eq('id', id);
+          if (error) throw error;
+          showToast('Nasabah berhasil diperbarui', 'success');
+        } else {
+          // INSERT
+          const { error } = await supabase
+            .from('nasabah')
+            .insert(payload);
+          if (error) throw error;
+          showToast('Nasabah berhasil ditambahkan', 'success');
+        }
+
+        closeFormModal();
+        await loadNasabah();
+      } catch (err) {
+        showFormError('Gagal simpan: ' + err.message);
+      } finally {
+        btnSave.disabled = false;
+        btnSave.textContent = 'Simpan';
+      }
+    }
+
+    // === Modal Delete ===
+    function openDeleteModal(id, name) {
+      currentDeleteId = id;
+      document.getElementById('deleteName').textContent = name;
+      document.getElementById('deleteReason').value = '';
+      document.getElementById('deleteError').classList.add('hidden');
+      document.getElementById('modalDelete').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('modalDelete').classList.add('hidden');
+      currentDeleteId = null;
+    }
+
+    async function handleDelete() {
+      const reason = document.getElementById('deleteReason').value.trim();
+      const errEl = document.getElementById('deleteError');
+      if (!reason) {
+        errEl.textContent = 'Alasan wajib diisi.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      const btn = document.getElementById('btnConfirmDelete');
+      btn.disabled = true;
+      btn.textContent = 'Menghapus...';
+
+      try {
+        const { error } = await supabase
+          .from('nasabah')
+          .update({
+            deleted_at: new Date().toISOString(),
+            deleted_by: currentPetugas.id,
+            delete_reason: reason,
+          })
+          .eq('id', currentDeleteId);
+
+        if (error) throw error;
+
+        showToast('Nasabah berhasil dihapus', 'success');
+        closeDeleteModal();
+        await loadNasabah();
+      } catch (err) {
+        errEl.textContent = 'Gagal hapus: ' + err.message;
+        errEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Hapus';
+      }
+    }
+
+    // === Event listeners ===
+    document.getElementById('searchInput').addEventListener('input', renderList);
+    document.getElementById('filterRT').addEventListener('change', renderList);
+    document.getElementById('btnAddNasabah').addEventListener('click', openAddModal);
+    document.getElementById('btnCloseForm').addEventListener('click', closeFormModal);
+    document.getElementById('btnCancelForm').addEventListener('click', closeFormModal);
+    document.getElementById('nasabahForm').addEventListener('submit', handleFormSubmit);
+    document.getElementById('btnCancelDelete').addEventListener('click', closeDeleteModal);
+    document.getElementById('btnConfirmDelete').addEventListener('click', handleDelete);
+
+    init();
+  </script>
+
+</body>
+</html>
