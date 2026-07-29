@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Master Harga Sampah · Bank Sampah Sunggingan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { 'sans': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'] },
+          colors: {
+            'hijau': {
+              50: '#F1F8F3', 100: '#DFF0E4', 200: '#B7DDC1', 300: '#8AC59A',
+              400: '#5FA773', 500: '#3A7D44', 600: '#2D5F3F', 700: '#254D33',
+              800: '#1E3F2A', 900: '#183321',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="font-sans bg-hijau-50 min-h-screen">
+
+  <div id="loadingState" class="min-h-screen flex items-center justify-center">
+    <div class="text-center">
+      <div class="w-12 h-12 border-4 border-hijau-200 border-t-hijau-500 rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-hijau-700 font-medium">Memuat harga...</p>
+    </div>
+  </div>
+
+  <div id="mainContent" class="hidden pb-24">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-hijau-100 sticky top-0 z-40">
+      <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="/petugas/dashboard.html" class="text-hijau-700 hover:text-hijau-800 p-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </a>
+          <div>
+            <div class="font-bold text-hijau-800 text-base">Master Harga Sampah</div>
+            <div class="text-hijau-600 text-xs" id="bankSampahName">-</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-4">
+
+      <!-- Info banner -->
+      <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4 text-sm text-yellow-800">
+        ⓘ Harga ini berlaku khusus untuk Bank Sampah Anda. Perubahan akan tersinkron ke dashboard kelurahan.
+      </div>
+
+      <!-- Filter by category (auto-populated) -->
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-gray-600 mb-1">Filter Kategori</label>
+        <select id="filterKategori" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-hijau-500">
+          <option value="">Semua Kategori</option>
+        </select>
+      </div>
+
+      <!-- List by kategori -->
+      <div id="jenisList" class="space-y-4"></div>
+
+      <!-- Empty state -->
+      <div id="emptyState" class="hidden bg-white rounded-xl p-8 text-center shadow-sm border border-hijau-100">
+        <div class="text-4xl mb-3">💰</div>
+        <p class="text-gray-600 font-medium mb-1">Belum ada jenis sampah</p>
+        <p class="text-gray-500 text-sm mb-4">Klik tombol + di bawah untuk menambah jenis sampah pertama.</p>
+      </div>
+
+    </main>
+
+    <!-- Floating add button -->
+    <button id="btnAdd" class="fixed bottom-6 right-6 bg-hijau-500 hover:bg-hijau-600 text-white rounded-full w-14 h-14 shadow-lg flex items-center justify-center z-30 transition" aria-label="Tambah Jenis Sampah">
+      <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+      </svg>
+    </button>
+
+  </div>
+
+  <!-- Modal Tambah/Edit -->
+  <div id="modalForm" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-hijau-800" id="modalFormTitle">Tambah Jenis Sampah</h2>
+        <button type="button" id="btnCloseForm" class="text-gray-500 hover:text-gray-700 p-1">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <form id="jenisForm" class="space-y-3">
+        <input type="hidden" id="jenisId" value="">
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">
+            Nama Jenis Sampah <span class="text-red-500">*</span>
+          </label>
+          <input type="text" id="fNama" required placeholder="Contoh: Kardus, Botol PET"
+            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Kategori</label>
+          <input type="text" id="fKategori" placeholder="Kertas / Plastik / Logam / Kaca / Lainnya" list="kategoriList"
+            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500">
+          <datalist id="kategoriList">
+            <option value="Kertas">
+            <option value="Plastik">
+            <option value="Logam">
+            <option value="Kaca">
+            <option value="Organik">
+            <option value="Lainnya">
+          </datalist>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">
+              Harga <span class="text-red-500">*</span>
+            </label>
+            <input type="number" id="fHarga" required min="0" step="1"
+              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Satuan</label>
+            <select id="fSatuan" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-hijau-500">
+              <option value="kg">kg</option>
+              <option value="bh">buah</option>
+              <option value="liter">liter</option>
+              <option value="pcs">pcs</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="editHargaLamaInfo" class="hidden bg-hijau-50 border border-hijau-200 rounded-lg p-3 text-sm">
+          <div class="text-xs text-gray-500 mb-1">Harga sebelumnya:</div>
+          <div class="font-semibold text-hijau-700" id="editHargaLamaValue">-</div>
+        </div>
+
+        <div id="formError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm"></div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" id="btnCancelForm" class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 text-sm">
+            Batal
+          </button>
+          <button type="submit" id="btnSaveForm" class="flex-1 py-3 bg-hijau-500 hover:bg-hijau-600 text-white rounded-lg font-semibold text-sm disabled:opacity-50">
+            Simpan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Delete -->
+  <div id="modalDelete" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-5">
+      <h2 class="text-lg font-bold text-red-700 mb-2">Hapus Jenis Sampah</h2>
+      <p class="text-gray-600 text-sm mb-3">
+        Yakin ingin menghapus <span class="font-bold" id="deleteJenisNama">-</span>?
+        Data transaksi lama tetap tersimpan untuk laporan.
+      </p>
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-gray-700 mb-1">Alasan <span class="text-red-500">*</span></label>
+        <textarea id="deleteReason" rows="2" required placeholder="Contoh: Tidak diterima lagi oleh pengepul"
+          class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
+      </div>
+      <div id="deleteError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm mb-3"></div>
+      <div class="flex gap-2">
+        <button type="button" id="btnCancelDelete" class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 text-sm">
+          Batal
+        </button>
+        <button type="button" id="btnConfirmDelete" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold text-sm disabled:opacity-50">
+          Hapus
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '/shared/config.js';
+    import { formatRp, showToast } from '/shared/utils.js';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
+
+    let currentPetugas = null;
+    let allJenis = [];
+    let currentDeleteId = null;
+
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return window.location.href = '/login.html';
+
+      const { data: petugas, error } = await supabase
+        .from('petugas')
+        .select('*, bank_sampah(*)')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error || !petugas || petugas.role !== 'petugas_rw') {
+        alert('Akses tidak valid.');
+        return window.location.href = '/login.html';
+      }
+
+      currentPetugas = petugas;
+      document.getElementById('bankSampahName').textContent = 'Bank Sampah ' + petugas.bank_sampah.nama + ' · RW ' + petugas.bank_sampah.rw;
+
+      await loadJenis();
+
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+
+      render();
+    }
+
+    async function loadJenis() {
+      const { data } = await supabase
+        .from('jenis_sampah')
+        .select('*')
+        .eq('bank_sampah_id', currentPetugas.bank_sampah.id)
+        .is('deleted_at', null)
+        .order('kategori', { ascending: true })
+        .order('urutan', { ascending: true });
+
+      allJenis = data || [];
+
+      // Populate filter kategori
+      const kategoriSet = new Set();
+      allJenis.forEach(j => { if (j.kategori) kategoriSet.add(j.kategori); });
+      const filter = document.getElementById('filterKategori');
+      const currentValue = filter.value;
+      filter.innerHTML = '<option value="">Semua Kategori</option>';
+      Array.from(kategoriSet).sort().forEach(k => {
+        const opt = document.createElement('option');
+        opt.value = k;
+        opt.textContent = k;
+        filter.appendChild(opt);
+      });
+      filter.value = currentValue;
+    }
+
+    function render() {
+      const filterKategori = document.getElementById('filterKategori').value;
+      const filtered = filterKategori
+        ? allJenis.filter(j => j.kategori === filterKategori)
+        : allJenis;
+
+      const list = document.getElementById('jenisList');
+      const emptyState = document.getElementById('emptyState');
+      list.innerHTML = '';
+
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+
+      // Group by kategori
+      const grouped = {};
+      filtered.forEach(j => {
+        const kat = j.kategori || 'Tanpa Kategori';
+        if (!grouped[kat]) grouped[kat] = [];
+        grouped[kat].push(j);
+      });
+
+      Object.keys(grouped).sort().forEach(kategori => {
+        const section = document.createElement('div');
+        section.innerHTML = `
+          <div class="text-xs font-bold text-hijau-700 uppercase mb-2 px-1">${escapeHtml(kategori)}</div>
+          <div class="space-y-2" data-group="${escapeHtml(kategori)}"></div>
+        `;
+        const container = section.querySelector('[data-group]');
+        grouped[kategori].forEach(j => container.appendChild(makeCard(j)));
+        list.appendChild(section);
+      });
+    }
+
+    function makeCard(jenis) {
+      const card = document.createElement('div');
+      card.className = 'bg-white rounded-xl p-4 shadow-sm border border-hijau-100 flex items-center justify-between';
+      card.innerHTML = `
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-hijau-800 text-base truncate">${escapeHtml(jenis.nama)}</div>
+          <div class="text-sm text-hijau-700 mt-0.5">${formatRp(jenis.harga_default)} / ${jenis.satuan_default}</div>
+        </div>
+        <div class="flex gap-1 ml-2">
+          <button data-id="${jenis.id}" class="btn-edit p-2 text-gray-600 hover:text-hijau-700 hover:bg-hijau-50 rounded-lg">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+          </button>
+          <button data-id="${jenis.id}" data-nama="${escapeHtml(jenis.nama)}" class="btn-delete p-2 text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-lg">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/>
+            </svg>
+          </button>
+        </div>
+      `;
+      card.querySelector('.btn-edit').addEventListener('click', () => openEditModal(jenis.id));
+      card.querySelector('.btn-delete').addEventListener('click', (e) => openDeleteModal(jenis.id, e.currentTarget.dataset.nama));
+      return card;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text ?? '';
+      return div.innerHTML;
+    }
+
+    // ==== FORM MODAL ====
+    function openAddModal() {
+      document.getElementById('modalFormTitle').textContent = 'Tambah Jenis Sampah';
+      document.getElementById('jenisId').value = '';
+      document.getElementById('fNama').value = '';
+      document.getElementById('fKategori').value = '';
+      document.getElementById('fHarga').value = '';
+      document.getElementById('fSatuan').value = 'kg';
+      document.getElementById('editHargaLamaInfo').classList.add('hidden');
+      document.getElementById('formError').classList.add('hidden');
+      document.getElementById('modalForm').classList.remove('hidden');
+      setTimeout(() => document.getElementById('fNama').focus(), 100);
+    }
+
+    function openEditModal(id) {
+      const j = allJenis.find(x => x.id === id);
+      if (!j) return;
+      document.getElementById('modalFormTitle').textContent = 'Edit ' + j.nama;
+      document.getElementById('jenisId').value = j.id;
+      document.getElementById('fNama').value = j.nama || '';
+      document.getElementById('fKategori').value = j.kategori || '';
+      document.getElementById('fHarga').value = j.harga_default || 0;
+      document.getElementById('fSatuan').value = j.satuan_default || 'kg';
+      document.getElementById('editHargaLamaValue').textContent = formatRp(j.harga_default) + ' / ' + j.satuan_default;
+      document.getElementById('editHargaLamaInfo').classList.remove('hidden');
+      document.getElementById('formError').classList.add('hidden');
+      document.getElementById('modalForm').classList.remove('hidden');
+      setTimeout(() => document.getElementById('fHarga').focus(), 100);
+    }
+
+    function closeForm() {
+      document.getElementById('modalForm').classList.add('hidden');
+    }
+
+    document.getElementById('btnAdd').addEventListener('click', openAddModal);
+    document.getElementById('btnCloseForm').addEventListener('click', closeForm);
+    document.getElementById('btnCancelForm').addEventListener('click', closeForm);
+
+    document.getElementById('jenisForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('jenisId').value;
+      const nama = document.getElementById('fNama').value.trim();
+      const kategori = document.getElementById('fKategori').value.trim();
+      const harga = Number(document.getElementById('fHarga').value);
+      const satuan = document.getElementById('fSatuan').value;
+      const errEl = document.getElementById('formError');
+
+      if (!nama) {
+        errEl.textContent = 'Nama wajib diisi.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      if (isNaN(harga) || harga < 0) {
+        errEl.textContent = 'Harga tidak valid.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      const btn = document.getElementById('btnSaveForm');
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
+
+      const payload = {
+        nama, kategori: kategori || null,
+        harga_default: harga,
+        satuan_default: satuan,
+        bank_sampah_id: currentPetugas.bank_sampah.id,
+      };
+
+      try {
+        if (id) {
+          const { error } = await supabase.from('jenis_sampah').update(payload).eq('id', id);
+          if (error) throw error;
+          showToast('Harga diperbarui', 'success');
+        } else {
+          const { error } = await supabase.from('jenis_sampah').insert(payload);
+          if (error) throw error;
+          showToast('Jenis sampah ditambahkan', 'success');
+        }
+        closeForm();
+        await loadJenis();
+        render();
+      } catch (err) {
+        errEl.textContent = 'Gagal simpan: ' + err.message;
+        errEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Simpan';
+      }
+    });
+
+    // ==== DELETE ====
+    function openDeleteModal(id, nama) {
+      currentDeleteId = id;
+      document.getElementById('deleteJenisNama').textContent = nama;
+      document.getElementById('deleteReason').value = '';
+      document.getElementById('deleteError').classList.add('hidden');
+      document.getElementById('modalDelete').classList.remove('hidden');
+    }
+
+    document.getElementById('btnCancelDelete').addEventListener('click', () => {
+      document.getElementById('modalDelete').classList.add('hidden');
+    });
+
+    document.getElementById('btnConfirmDelete').addEventListener('click', async () => {
+      const reason = document.getElementById('deleteReason').value.trim();
+      const errEl = document.getElementById('deleteError');
+      if (!reason) {
+        errEl.textContent = 'Alasan wajib diisi.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      const btn = document.getElementById('btnConfirmDelete');
+      btn.disabled = true;
+      btn.textContent = 'Menghapus...';
+
+      const { error } = await supabase
+        .from('jenis_sampah')
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: currentPetugas.id,
+          delete_reason: reason,
+          aktif: false,
+        })
+        .eq('id', currentDeleteId);
+
+      if (error) {
+        errEl.textContent = 'Gagal: ' + error.message;
+        errEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Hapus';
+        return;
+      }
+
+      showToast('Jenis sampah dihapus', 'success');
+      document.getElementById('modalDelete').classList.add('hidden');
+      await loadJenis();
+      render();
+      btn.disabled = false;
+      btn.textContent = 'Hapus';
+    });
+
+    document.getElementById('filterKategori').addEventListener('change', render);
+
+    init();
+  </script>
+
+</body>
+</html>

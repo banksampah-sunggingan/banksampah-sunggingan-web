@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sesi Hari Ini · Bank Sampah Sunggingan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { 'sans': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'] },
+          colors: {
+            'hijau': {
+              50: '#F1F8F3', 100: '#DFF0E4', 200: '#B7DDC1', 300: '#8AC59A',
+              400: '#5FA773', 500: '#3A7D44', 600: '#2D5F3F', 700: '#254D33',
+              800: '#1E3F2A', 900: '#183321',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="font-sans bg-hijau-50 min-h-screen">
+
+  <div id="loadingState" class="min-h-screen flex items-center justify-center">
+    <div class="text-center">
+      <div class="w-12 h-12 border-4 border-hijau-200 border-t-hijau-500 rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-hijau-700 font-medium">Memuat data...</p>
+    </div>
+  </div>
+
+  <div id="mainContent" class="hidden pb-32">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-hijau-100 sticky top-0 z-40">
+      <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="/petugas/dashboard.html" class="text-hijau-700 hover:text-hijau-800 p-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </a>
+          <div>
+            <div class="font-bold text-hijau-800 text-base">Rekap Sesi Hari Ini</div>
+            <div class="text-hijau-600 text-xs" id="bankSampahName">-</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-4">
+
+      <!-- No sesi state -->
+      <div id="stateNoSesi" class="hidden">
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-hijau-100 text-center">
+          <div class="text-4xl mb-3">📋</div>
+          <h2 class="text-lg font-bold text-hijau-800 mb-1">Belum Ada Sesi Aktif Hari Ini</h2>
+          <p class="text-gray-600 text-sm mb-4">Mulai sesi setor terlebih dahulu untuk mulai menerima setoran.</p>
+          <a href="/petugas/input-transaksi.html" class="inline-block bg-hijau-500 hover:bg-hijau-600 text-white font-bold px-6 py-3 rounded-xl transition text-sm">
+            KE INPUT TRANSAKSI
+          </a>
+        </div>
+      </div>
+
+      <!-- Sesi info + list -->
+      <div id="stateWithSesi" class="hidden">
+
+        <!-- Session status card -->
+        <div class="rounded-xl p-4 shadow-sm mb-4" id="sesiCard">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <div class="text-xs font-semibold mb-1" id="sesiStatusLabel">-</div>
+              <div class="text-lg font-bold" id="sesiDate">-</div>
+              <div class="text-xs mt-0.5" id="sesiTime">-</div>
+            </div>
+            <span class="px-3 py-1 rounded-full text-xs font-bold" id="sesiStatusBadge">-</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t" id="sesiStatsGrid">
+            <div class="text-center">
+              <div class="text-xs opacity-80 mb-0.5">Setoran</div>
+              <div class="text-lg font-bold" id="statSetoran">0</div>
+            </div>
+            <div class="text-center">
+              <div class="text-xs opacity-80 mb-0.5">Total Berat</div>
+              <div class="text-lg font-bold" id="statBerat">0 kg</div>
+            </div>
+            <div class="text-center">
+              <div class="text-xs opacity-80 mb-0.5">Total Nilai</div>
+              <div class="text-lg font-bold" id="statNilai">Rp 0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- List setoran -->
+        <div id="setoranList" class="space-y-3"></div>
+
+        <!-- Empty state -->
+        <div id="emptySetoran" class="hidden bg-white rounded-xl p-8 text-center shadow-sm border border-hijau-100">
+          <div class="text-4xl mb-3">🛍️</div>
+          <p class="text-gray-600 font-medium mb-1">Belum ada setoran hari ini</p>
+          <p class="text-gray-500 text-sm mb-4">Klik tombol di bawah untuk input setoran pertama.</p>
+          <a href="/petugas/input-transaksi.html" class="inline-block bg-hijau-500 hover:bg-hijau-600 text-white font-semibold px-5 py-2.5 rounded-lg transition text-sm">
+            Input Setoran
+          </a>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- Bottom action bar (if sesi still open) -->
+    <div id="bottomActions" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-3 z-30">
+      <div class="max-w-4xl mx-auto flex gap-2">
+        <a href="/petugas/input-transaksi.html" class="flex-1 py-3 border-2 border-hijau-500 text-hijau-700 rounded-xl font-bold hover:bg-hijau-50 transition text-sm text-center">
+          + INPUT SETORAN
+        </a>
+        <button id="btnTutupSesi" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition text-sm shadow-sm">
+          TUTUP SESI
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal Konfirmasi Tutup Sesi -->
+  <div id="modalTutup" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-5">
+      <h2 class="text-lg font-bold text-red-700 mb-2">Tutup Sesi Setor?</h2>
+      <p class="text-gray-600 text-sm mb-4">
+        Setelah sesi ditutup, tidak bisa lagi input setoran atau hapus setoran di sesi ini. Yakin?
+      </p>
+      <div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
+        <div class="font-semibold text-gray-700 mb-1">Ringkasan sesi:</div>
+        <div class="text-gray-600" id="tutupRingkasan">-</div>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" id="btnCancelTutup" class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 text-sm">
+          Batal
+        </button>
+        <button type="button" id="btnConfirmTutup" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold text-sm disabled:opacity-50">
+          Ya, Tutup Sesi
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Konfirmasi Delete Setoran -->
+  <div id="modalDelete" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-5">
+      <h2 class="text-lg font-bold text-red-700 mb-2">Hapus Setoran?</h2>
+      <p class="text-gray-600 text-sm mb-3">
+        Hapus setoran <span class="font-bold" id="deleteSetoranNasabah">-</span> senilai <span class="font-bold" id="deleteSetoranTotal">-</span>?
+      </p>
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-gray-700 mb-1">Alasan <span class="text-red-500">*</span></label>
+        <textarea id="deleteReason" rows="2" required placeholder="Contoh: Salah input, dobel entry"
+          class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
+      </div>
+      <div id="deleteError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm mb-3"></div>
+      <div class="flex gap-2">
+        <button type="button" id="btnCancelDelete" class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 text-sm">
+          Batal
+        </button>
+        <button type="button" id="btnConfirmDelete" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold text-sm disabled:opacity-50">
+          Hapus
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '/shared/config.js';
+    import { formatRp, formatTanggal, showToast } from '/shared/utils.js';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
+
+    let currentPetugas = null;
+    let currentSesi = null;
+    let setoranList = [];
+    let currentDeleteSetoranId = null;
+
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return window.location.href = '/login.html';
+
+      const { data: petugas, error } = await supabase
+        .from('petugas')
+        .select('*, bank_sampah(*)')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error || !petugas || petugas.role !== 'petugas_rw') {
+        alert('Akses tidak valid.');
+        return window.location.href = '/login.html';
+      }
+
+      currentPetugas = petugas;
+      document.getElementById('bankSampahName').textContent = 'Bank Sampah ' + petugas.bank_sampah.nama + ' · RW ' + petugas.bank_sampah.rw;
+
+      await loadSesi();
+
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+
+      render();
+    }
+
+    async function loadSesi() {
+      const today = new Date().toISOString().split('T')[0];
+      const { data: sesi } = await supabase
+        .from('sesi_setor')
+        .select('*')
+        .eq('bank_sampah_id', currentPetugas.bank_sampah.id)
+        .eq('tanggal', today)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      currentSesi = sesi || null;
+
+      if (currentSesi) {
+        // Load semua setoran di sesi ini
+        const { data: setoran } = await supabase
+          .from('setoran')
+          .select('*, nasabah(nama, rt, dawis), transaksi(*, jenis_sampah(nama, satuan_default))')
+          .eq('sesi_setor_id', currentSesi.id)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false });
+
+        // Filter transaksi non-deleted di client
+        setoranList = (setoran || []).map(s => ({
+          ...s,
+          transaksi: (s.transaksi || []).filter(t => !t.deleted_at)
+        }));
+      }
+    }
+
+    function render() {
+      const stateNoSesi = document.getElementById('stateNoSesi');
+      const stateWithSesi = document.getElementById('stateWithSesi');
+
+      if (!currentSesi) {
+        stateNoSesi.classList.remove('hidden');
+        stateWithSesi.classList.add('hidden');
+        document.getElementById('bottomActions').classList.add('hidden');
+        return;
+      }
+
+      stateNoSesi.classList.add('hidden');
+      stateWithSesi.classList.remove('hidden');
+
+      // Session card styling based on status
+      const sesiCard = document.getElementById('sesiCard');
+      const statusBadge = document.getElementById('sesiStatusBadge');
+      const statusLabel = document.getElementById('sesiStatusLabel');
+      const statsGrid = document.getElementById('sesiStatsGrid');
+
+      if (currentSesi.status === 'open') {
+        sesiCard.className = 'rounded-xl p-4 shadow-sm mb-4 bg-hijau-500 text-white border border-hijau-600';
+        statusBadge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-white text-hijau-700';
+        statusBadge.textContent = 'AKTIF';
+        statusLabel.textContent = 'SESI SETOR AKTIF';
+        statusLabel.className = 'text-xs font-semibold mb-1 text-hijau-100';
+        statsGrid.className = 'grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-hijau-400';
+        document.getElementById('bottomActions').classList.remove('hidden');
+      } else {
+        sesiCard.className = 'rounded-xl p-4 shadow-sm mb-4 bg-white text-gray-700 border border-gray-300';
+        statusBadge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-700';
+        statusBadge.textContent = 'DITUTUP';
+        statusLabel.textContent = 'SESI SUDAH DITUTUP';
+        statusLabel.className = 'text-xs font-semibold mb-1 text-gray-500';
+        statsGrid.className = 'grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-200';
+        document.getElementById('bottomActions').classList.add('hidden');
+      }
+
+      document.getElementById('sesiDate').textContent = formatTanggal(currentSesi.tanggal);
+      const startTime = new Date(currentSesi.jam_mulai);
+      const timeStr = startTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      let timeInfo = 'Dibuka jam ' + timeStr;
+      if (currentSesi.jam_selesai) {
+        const endStr = new Date(currentSesi.jam_selesai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        timeInfo += ' · Ditutup jam ' + endStr;
+      }
+      document.getElementById('sesiTime').textContent = timeInfo;
+
+      // Stats
+      const totalSetoran = setoranList.length;
+      let totalBerat = 0;
+      let totalNilai = 0;
+      setoranList.forEach(s => {
+        totalNilai += Number(s.total_rp || 0);
+        (s.transaksi || []).forEach(t => {
+          if (t.satuan === 'kg') totalBerat += Number(t.jumlah || 0);
+        });
+      });
+      document.getElementById('statSetoran').textContent = totalSetoran;
+      document.getElementById('statBerat').textContent = totalBerat.toFixed(1) + ' kg';
+      document.getElementById('statNilai').textContent = formatRp(totalNilai);
+
+      // Render setoran list
+      const list = document.getElementById('setoranList');
+      const emptyState = document.getElementById('emptySetoran');
+
+      if (setoranList.length === 0) {
+        list.innerHTML = '';
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+        list.innerHTML = '';
+        setoranList.forEach(s => list.appendChild(makeSetoranCard(s)));
+      }
+    }
+
+    function makeSetoranCard(setoran) {
+      const card = document.createElement('div');
+      card.className = 'bg-white rounded-xl p-4 shadow-sm border border-hijau-100';
+
+      const nasabahName = setoran.nasabah?.nama || 'Tidak dikenali';
+      const nasabahRT = setoran.nasabah?.rt ? 'RT ' + setoran.nasabah.rt : '';
+      const nasabahDawis = setoran.nasabah?.dawis ? ' · ' + setoran.nasabah.dawis : '';
+      const canDelete = currentSesi.status === 'open';
+
+      const timeStr = new Date(setoran.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+      const itemsHtml = (setoran.transaksi || []).map(t => `
+        <div class="flex items-center justify-between py-1.5 border-b border-gray-100 last:border-b-0 text-sm">
+          <div>
+            <span class="font-medium text-gray-800">${escapeHtml(t.jenis_sampah?.nama || '-')}</span>
+            <span class="text-gray-500 text-xs ml-1">${Number(t.jumlah).toFixed(2)} ${t.satuan} × ${formatRp(t.harga_saat_transaksi)}</span>
+          </div>
+          <span class="font-semibold text-hijau-700">${formatRp(t.total_rp)}</span>
+        </div>
+      `).join('');
+
+      card.innerHTML = `
+        <div class="flex items-start justify-between mb-3">
+          <div class="flex-1 min-w-0">
+            <div class="font-bold text-hijau-800 text-base truncate">${escapeHtml(nasabahName)}</div>
+            <div class="text-xs text-gray-500">${nasabahRT}${nasabahDawis} · ${timeStr}</div>
+          </div>
+          ${canDelete ? `
+            <button data-id="${setoran.id}" data-nasabah="${escapeHtml(nasabahName)}" data-total="${setoran.total_rp}" class="btn-delete p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/>
+              </svg>
+            </button>
+          ` : ''}
+        </div>
+        <div class="border-t border-gray-100 pt-2">
+          ${itemsHtml || '<div class="text-xs text-gray-400 italic">Tidak ada item.</div>'}
+        </div>
+        <div class="mt-2 pt-2 border-t-2 border-hijau-100 flex items-center justify-between">
+          <span class="text-xs font-semibold text-gray-500">TOTAL SETORAN</span>
+          <span class="text-base font-bold text-hijau-700">${formatRp(setoran.total_rp)}</span>
+        </div>
+      `;
+
+      const btnDel = card.querySelector('.btn-delete');
+      if (btnDel) {
+        btnDel.addEventListener('click', () => openDeleteModal(btnDel.dataset.id, btnDel.dataset.nasabah, btnDel.dataset.total));
+      }
+
+      return card;
+    }
+
+    // ==== TUTUP SESI ====
+    document.getElementById('btnTutupSesi').addEventListener('click', () => {
+      if (setoranList.length === 0) {
+        if (!confirm('Belum ada setoran di sesi ini. Yakin tutup sesi?')) return;
+      }
+      const totalNilai = setoranList.reduce((s, x) => s + Number(x.total_rp || 0), 0);
+      document.getElementById('tutupRingkasan').textContent = `${setoranList.length} setoran · ${formatRp(totalNilai)}`;
+      document.getElementById('modalTutup').classList.remove('hidden');
+    });
+
+    document.getElementById('btnCancelTutup').addEventListener('click', () => {
+      document.getElementById('modalTutup').classList.add('hidden');
+    });
+
+    document.getElementById('btnConfirmTutup').addEventListener('click', async () => {
+      const btn = document.getElementById('btnConfirmTutup');
+      btn.disabled = true;
+      btn.textContent = 'Menutup...';
+
+      const { error } = await supabase
+        .from('sesi_setor')
+        .update({
+          status: 'closed',
+          jam_selesai: new Date().toISOString(),
+          ditutup_oleh: currentPetugas.id,
+        })
+        .eq('id', currentSesi.id);
+
+      if (error) {
+        alert('Gagal tutup sesi: ' + error.message);
+        btn.disabled = false;
+        btn.textContent = 'Ya, Tutup Sesi';
+        return;
+      }
+
+      showToast('Sesi berhasil ditutup', 'success');
+      document.getElementById('modalTutup').classList.add('hidden');
+      await loadSesi();
+      render();
+    });
+
+    // ==== DELETE SETORAN ====
+    function openDeleteModal(id, nasabah, total) {
+      currentDeleteSetoranId = id;
+      document.getElementById('deleteSetoranNasabah').textContent = nasabah;
+      document.getElementById('deleteSetoranTotal').textContent = formatRp(total);
+      document.getElementById('deleteReason').value = '';
+      document.getElementById('deleteError').classList.add('hidden');
+      document.getElementById('modalDelete').classList.remove('hidden');
+    }
+
+    document.getElementById('btnCancelDelete').addEventListener('click', () => {
+      document.getElementById('modalDelete').classList.add('hidden');
+    });
+
+    document.getElementById('btnConfirmDelete').addEventListener('click', async () => {
+      const reason = document.getElementById('deleteReason').value.trim();
+      const errEl = document.getElementById('deleteError');
+      if (!reason) {
+        errEl.textContent = 'Alasan wajib diisi.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      const btn = document.getElementById('btnConfirmDelete');
+      btn.disabled = true;
+      btn.textContent = 'Menghapus...';
+
+      const { error } = await supabase
+        .from('setoran')
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: currentPetugas.id,
+          delete_reason: reason,
+        })
+        .eq('id', currentDeleteSetoranId);
+
+      if (error) {
+        errEl.textContent = 'Gagal: ' + error.message;
+        errEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Hapus';
+        return;
+      }
+
+      showToast('Setoran dihapus', 'success');
+      document.getElementById('modalDelete').classList.add('hidden');
+      await loadSesi();
+      render();
+      btn.disabled = false;
+      btn.textContent = 'Hapus';
+    });
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text ?? '';
+      return div.innerHTML;
+    }
+
+    init();
+  </script>
+
+</body>
+</html>
