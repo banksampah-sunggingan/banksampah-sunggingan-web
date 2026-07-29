@@ -612,14 +612,16 @@
           renderKeranjang();
         });
       });
-      list.querySelectorAll('.input-item').forEach(inp => {
-        inp.addEventListener('input', () => {
-          const idx = Number(inp.dataset.idx);
-          const field = inp.dataset.field;
-          keranjang[idx][field] = inp.value;
-          updateGrandTotal();
-        });
-      });
+        list.querySelectorAll('.input-item').forEach(inp => {
+                inp.addEventListener('input', () => {
+                const idx = Number(inp.dataset.idx);
+                const field = inp.dataset.field;
+                keranjang[idx][field] = inp.value;
+                // Update subtotal per baris + grand total
+                updateSubtotal(idx);
+                updateGrandTotal();
+                });
+            });
 
       // Auto-focus ke input jumlah baris terakhir yang jumlahnya masih kosong
       const inputs = list.querySelectorAll('input[data-field="jumlah"]');
@@ -635,6 +637,16 @@
         sum + (Number(item.jumlah) || 0) * (Number(item.harga) || 0), 0
       );
       document.getElementById('grandTotal').textContent = formatRp(total);
+    }
+    function updateSubtotal(idx) {
+      const item = keranjang[idx];
+      const subtotal = (Number(item.jumlah) || 0) * (Number(item.harga) || 0);
+      // Cari div subtotal di row ke-idx
+      const row = document.querySelectorAll('#keranjangList > div')[idx];
+      if (row) {
+        const subtotalDiv = row.querySelector('.text-right > .font-bold');
+        if (subtotalDiv) subtotalDiv.textContent = formatRp(subtotal);
+      }
     }
 
     // ==== SIMPAN SETORAN ====
