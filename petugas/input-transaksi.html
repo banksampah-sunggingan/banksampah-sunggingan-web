@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Input Transaksi · Bank Sampah Sunggingan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { 'sans': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'] },
+          colors: {
+            'hijau': {
+              50: '#F1F8F3', 100: '#DFF0E4', 200: '#B7DDC1', 300: '#8AC59A',
+              400: '#5FA773', 500: '#3A7D44', 600: '#2D5F3F', 700: '#254D33',
+              800: '#1E3F2A', 900: '#183321',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="font-sans bg-hijau-50 min-h-screen">
+
+  <!-- Loading state -->
+  <div id="loadingState" class="min-h-screen flex items-center justify-center">
+    <div class="text-center">
+      <div class="w-12 h-12 border-4 border-hijau-200 border-t-hijau-500 rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-hijau-700 font-medium">Memuat data...</p>
+    </div>
+  </div>
+
+  <div id="mainContent" class="hidden pb-32">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-hijau-100 sticky top-0 z-40">
+      <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="/petugas/dashboard.html" class="text-hijau-700 hover:text-hijau-800 p-1">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </a>
+          <div>
+            <div class="font-bold text-hijau-800 text-base">Input Transaksi</div>
+            <div class="text-hijau-600 text-xs" id="bankSampahName">-</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-4">
+
+      <!-- STATE A: Belum ada sesi -->
+      <div id="stateNoSesi" class="hidden">
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-hijau-100 text-center">
+          <div class="w-16 h-16 bg-hijau-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-hijau-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <h2 class="text-xl font-bold text-hijau-800 mb-2">Belum Ada Sesi Setor</h2>
+          <p class="text-gray-600 text-sm mb-6">
+            Mulai sesi setor untuk mulai menerima setoran nasabah hari ini.
+          </p>
+          <button id="btnMulaiSesi" class="bg-hijau-500 hover:bg-hijau-600 text-white font-bold px-6 py-3.5 rounded-xl transition text-base w-full max-w-xs disabled:opacity-50">
+            MULAI SESI SETOR
+          </button>
+          <p class="text-xs text-gray-400 mt-3" id="sesiDateInfo">-</p>
+        </div>
+
+        <!-- Info sesi terakhir -->
+        <div id="lastSesiInfo" class="hidden mt-4 bg-white rounded-xl p-4 shadow-sm border border-hijau-100">
+          <div class="text-xs font-semibold text-gray-500 mb-2">SESI TERAKHIR</div>
+          <div class="text-sm" id="lastSesiContent">-</div>
+        </div>
+      </div>
+
+      <!-- STATE B: Sesi open, form input -->
+      <div id="stateSesiOpen" class="hidden">
+
+        <!-- Session info bar -->
+        <div class="bg-hijau-100 border border-hijau-200 rounded-xl p-3 mb-4 flex items-center justify-between">
+          <div>
+            <div class="text-xs text-hijau-700 font-semibold">SESI SETOR AKTIF</div>
+            <div class="text-sm text-hijau-800 font-bold" id="sesiActiveInfo">-</div>
+          </div>
+          <a href="/petugas/sesi-hari-ini.html" class="text-xs text-hijau-700 hover:text-hijau-800 font-semibold underline">
+            Lihat Sesi
+          </a>
+        </div>
+
+        <!-- Step 1: Pilih Nasabah -->
+        <div id="stepNasabah" class="bg-white rounded-xl p-4 shadow-sm border border-hijau-100 mb-4">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-6 h-6 bg-hijau-500 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
+            <label class="text-sm font-bold text-gray-700">Pilih Nasabah</label>
+          </div>
+
+          <div class="relative">
+            <input
+              type="text"
+              id="nasabahSearch"
+              placeholder="Ketik nama nasabah..."
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hijau-500 focus:border-hijau-500 text-base"
+              autocomplete="off"
+            >
+
+            <!-- Dropdown suggestions -->
+            <div id="nasabahDropdown" class="hidden absolute z-30 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto"></div>
+          </div>
+
+          <!-- Selected nasabah display -->
+          <div id="selectedNasabahDisplay" class="hidden mt-3 p-3 bg-hijau-50 border border-hijau-200 rounded-lg flex items-center justify-between">
+            <div>
+              <div class="font-bold text-hijau-800" id="selectedNasabahName">-</div>
+              <div class="text-xs text-hijau-700" id="selectedNasabahMeta">-</div>
+            </div>
+            <button id="btnGantiNasabah" class="text-hijau-700 hover:text-hijau-800 text-sm font-semibold px-2 py-1">
+              Ganti
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Pilih Jenis Sampah -->
+        <div id="stepJenisSampah" class="hidden bg-white rounded-xl p-4 shadow-sm border border-hijau-100 mb-4">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="w-6 h-6 bg-hijau-500 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+            <label class="text-sm font-bold text-gray-700">Tap Jenis Sampah untuk Menambah</label>
+          </div>
+
+          <div id="jenisSampahGrid" class="grid grid-cols-2 gap-2"></div>
+        </div>
+
+        <!-- Step 3: Keranjang -->
+        <div id="stepKeranjang" class="hidden bg-white rounded-xl p-4 shadow-sm border-2 border-hijau-300 mb-4">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="w-6 h-6 bg-hijau-500 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+            <label class="text-sm font-bold text-gray-700">Keranjang Setoran</label>
+          </div>
+
+          <div id="keranjangList" class="space-y-2 mb-3"></div>
+
+          <div class="pt-3 border-t-2 border-hijau-200 flex items-center justify-between">
+            <span class="text-sm font-semibold text-gray-600">TOTAL:</span>
+            <span class="text-2xl font-bold text-hijau-700" id="grandTotal">Rp 0</span>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- Fixed bottom action bar (only when keranjang has items) -->
+    <div id="bottomActions" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-3 z-30">
+      <div class="max-w-4xl mx-auto flex gap-2">
+        <button id="btnBatal" class="px-4 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition text-sm">
+          Batal
+        </button>
+        <button id="btnSimpan" class="flex-1 py-3 bg-hijau-500 hover:bg-hijau-600 text-white rounded-xl font-bold transition text-base shadow-sm disabled:opacity-50">
+          SIMPAN & LANJUT
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal Tambah Nasabah Cepat -->
+  <div id="modalQuickAdd" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-hijau-800">Tambah Nasabah Baru</h2>
+        <button type="button" id="btnCloseQuickAdd" class="text-gray-500 hover:text-gray-700 p-1">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <form id="quickAddForm" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Nama <span class="text-red-500">*</span></label>
+          <input type="text" id="qaNama" required class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">RT <span class="text-red-500">*</span></label>
+          <input type="text" id="qaRT" required placeholder="01" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500">
+        </div>
+        <div id="qaError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm"></div>
+        <div class="flex gap-2 pt-2">
+          <button type="button" id="btnCancelQuickAdd" class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50">Batal</button>
+          <button type="submit" id="btnSaveQuickAdd" class="flex-1 py-3 bg-hijau-500 hover:bg-hijau-600 text-white rounded-lg font-semibold text-sm disabled:opacity-50">Tambah & Pilih</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '/shared/config.js';
+    import { formatRp, formatTanggal, showToast } from '/shared/utils.js';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
+
+    // ==== STATE ====
+    let currentPetugas = null;
+    let currentSesi = null;
+    let allNasabah = [];
+    let allJenisSampah = [];
+    let selectedNasabah = null;
+    let keranjang = []; // { jenis_sampah_id, jenis_nama, jumlah, satuan, harga }
+
+    // ==== INIT ====
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return window.location.href = '/login.html';
+
+      const { data: petugas, error } = await supabase
+        .from('petugas')
+        .select('*, bank_sampah(*)')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error || !petugas || petugas.role !== 'petugas_rw') {
+        alert('Akses tidak valid.');
+        await supabase.auth.signOut();
+        return window.location.href = '/login.html';
+      }
+
+      currentPetugas = petugas;
+      document.getElementById('bankSampahName').textContent = 'Bank Sampah ' + petugas.bank_sampah.nama + ' · RW ' + petugas.bank_sampah.rw;
+      document.getElementById('sesiDateInfo').textContent = 'Hari ini: ' + formatTanggal(new Date().toISOString());
+
+      // Cek sesi setor yang open
+      await loadCurrentSesi();
+
+      // Load data pendukung
+      await Promise.all([loadNasabah(), loadJenisSampah()]);
+
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+
+      renderState();
+    }
+
+    async function loadCurrentSesi() {
+      const { data, error } = await supabase
+        .from('sesi_setor')
+        .select('*')
+        .eq('bank_sampah_id', currentPetugas.bank_sampah.id)
+        .eq('status', 'open')
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && data) {
+        currentSesi = data;
+      } else {
+        currentSesi = null;
+      }
+    }
+
+    async function loadNasabah() {
+      const { data, error } = await supabase
+        .from('nasabah')
+        .select('*')
+        .eq('bank_sampah_id', currentPetugas.bank_sampah.id)
+        .is('deleted_at', null)
+        .order('is_default', { ascending: false })
+        .order('nama', { ascending: true });
+
+      allNasabah = data || [];
+    }
+
+    async function loadJenisSampah() {
+      const { data, error } = await supabase
+        .from('jenis_sampah')
+        .select('*')
+        .eq('bank_sampah_id', currentPetugas.bank_sampah.id)
+        .eq('aktif', true)
+        .is('deleted_at', null)
+        .order('urutan', { ascending: true });
+
+      allJenisSampah = data || [];
+    }
+
+    async function loadLastSesi() {
+      const { data } = await supabase
+        .from('sesi_setor')
+        .select('*, setoran(total_rp)')
+        .eq('bank_sampah_id', currentPetugas.bank_sampah.id)
+        .eq('status', 'closed')
+        .order('tanggal', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        const totalNilai = (data.setoran || []).reduce((sum, s) => sum + Number(s.total_rp || 0), 0);
+        const totalSetoran = (data.setoran || []).length;
+        document.getElementById('lastSesiContent').innerHTML = `
+          <div class="text-gray-700">
+            <div class="font-semibold">${formatTanggal(data.tanggal)}</div>
+            <div class="text-xs text-gray-500 mt-0.5">${totalSetoran} setoran · ${formatRp(totalNilai)}</div>
+          </div>
+        `;
+        document.getElementById('lastSesiInfo').classList.remove('hidden');
+      }
+    }
+
+    function renderState() {
+      const stateNoSesi = document.getElementById('stateNoSesi');
+      const stateSesiOpen = document.getElementById('stateSesiOpen');
+
+      if (!currentSesi) {
+        stateNoSesi.classList.remove('hidden');
+        stateSesiOpen.classList.add('hidden');
+        loadLastSesi();
+      } else {
+        stateNoSesi.classList.add('hidden');
+        stateSesiOpen.classList.remove('hidden');
+        document.getElementById('sesiActiveInfo').textContent = formatTanggal(currentSesi.tanggal);
+        renderJenisSampahGrid();
+      }
+    }
+
+    // ==== MULAI SESI ====
+    async function mulaiSesi() {
+      const btn = document.getElementById('btnMulaiSesi');
+      btn.disabled = true;
+      btn.textContent = 'Memulai sesi...';
+
+      const today = new Date().toISOString().split('T')[0];
+
+      const { data, error } = await supabase
+        .from('sesi_setor')
+        .insert({
+          bank_sampah_id: currentPetugas.bank_sampah.id,
+          tanggal: today,
+          status: 'open',
+          dibuka_oleh: currentPetugas.id,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        alert('Gagal mulai sesi: ' + error.message);
+        btn.disabled = false;
+        btn.textContent = 'MULAI SESI SETOR';
+        return;
+      }
+
+      currentSesi = data;
+      showToast('Sesi setor dimulai', 'success');
+      renderState();
+    }
+
+    // ==== NASABAH SEARCH ====
+    const nasabahSearch = document.getElementById('nasabahSearch');
+    const nasabahDropdown = document.getElementById('nasabahDropdown');
+
+    nasabahSearch.addEventListener('input', () => {
+      const q = nasabahSearch.value.trim().toLowerCase();
+      if (q.length < 1) {
+        nasabahDropdown.classList.add('hidden');
+        return;
+      }
+
+      const filtered = allNasabah
+        .filter(n => n.nama.toLowerCase().includes(q))
+        .slice(0, 10);
+
+      nasabahDropdown.innerHTML = '';
+      
+      if (filtered.length === 0) {
+        nasabahDropdown.innerHTML = `
+          <button type="button" id="btnQuickAddFromSearch" class="w-full text-left px-4 py-3 hover:bg-hijau-50 border-b border-gray-100">
+            <div class="font-semibold text-hijau-700 text-sm">+ Tambah "${escapeHtml(nasabahSearch.value.trim())}" sebagai nasabah baru</div>
+          </button>
+        `;
+        document.getElementById('btnQuickAddFromSearch').addEventListener('click', () => openQuickAdd(nasabahSearch.value.trim()));
+      } else {
+        filtered.forEach(n => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'w-full text-left px-4 py-3 hover:bg-hijau-50 border-b border-gray-100 last:border-b-0';
+          btn.innerHTML = `
+            <div class="font-semibold text-gray-800 text-sm">${escapeHtml(n.nama)}</div>
+            <div class="text-xs text-gray-500">${n.is_default ? 'Default · ' : ''}${n.rt ? 'RT ' + escapeHtml(n.rt) : '-'}${n.dawis ? ' · ' + escapeHtml(n.dawis) : ''}</div>
+          `;
+          btn.addEventListener('click', () => selectNasabah(n));
+          nasabahDropdown.appendChild(btn);
+        });
+
+        // Selalu kasih opsi tambah baru
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'w-full text-left px-4 py-3 hover:bg-hijau-50 border-t-2 border-hijau-100 bg-hijau-50 font-semibold text-hijau-700 text-sm';
+        addBtn.textContent = '+ Tambah nasabah baru';
+        addBtn.addEventListener('click', () => openQuickAdd(nasabahSearch.value.trim()));
+        nasabahDropdown.appendChild(addBtn);
+      }
+
+      nasabahDropdown.classList.remove('hidden');
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener('click', (e) => {
+      if (!nasabahSearch.contains(e.target) && !nasabahDropdown.contains(e.target)) {
+        nasabahDropdown.classList.add('hidden');
+      }
+    });
+
+    function selectNasabah(n) {
+      selectedNasabah = n;
+      nasabahDropdown.classList.add('hidden');
+      nasabahSearch.value = '';
+      nasabahSearch.classList.add('hidden');
+
+      document.getElementById('selectedNasabahDisplay').classList.remove('hidden');
+      document.getElementById('selectedNasabahName').textContent = n.nama;
+      document.getElementById('selectedNasabahMeta').textContent = 
+        (n.is_default ? 'Default · ' : '') + 
+        (n.rt ? 'RT ' + n.rt : '-') +
+        (n.dawis ? ' · ' + n.dawis : '');
+
+      // Show jenis sampah step
+      document.getElementById('stepJenisSampah').classList.remove('hidden');
+    }
+
+    document.getElementById('btnGantiNasabah').addEventListener('click', resetNasabah);
+
+    function resetNasabah() {
+      selectedNasabah = null;
+      keranjang = [];
+      nasabahSearch.classList.remove('hidden');
+      nasabahSearch.value = '';
+      nasabahSearch.focus();
+      document.getElementById('selectedNasabahDisplay').classList.add('hidden');
+      document.getElementById('stepJenisSampah').classList.add('hidden');
+      document.getElementById('stepKeranjang').classList.add('hidden');
+      document.getElementById('bottomActions').classList.add('hidden');
+      renderKeranjang();
+    }
+
+    // ==== JENIS SAMPAH GRID ====
+    function renderJenisSampahGrid() {
+      const grid = document.getElementById('jenisSampahGrid');
+      grid.innerHTML = '';
+
+      if (allJenisSampah.length === 0) {
+        grid.innerHTML = '<div class="col-span-2 text-center text-gray-500 text-sm py-4">Belum ada jenis sampah. Hubungi admin untuk setup harga.</div>';
+        return;
+      }
+
+      allJenisSampah.forEach(js => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'p-3 border-2 border-hijau-200 rounded-lg hover:border-hijau-500 hover:bg-hijau-50 transition text-left active:scale-95';
+        btn.innerHTML = `
+          <div class="font-bold text-hijau-800 text-sm">${escapeHtml(js.nama)}</div>
+          <div class="text-xs text-hijau-600 mt-0.5">${formatRp(js.harga_default)}/${js.satuan_default}</div>
+        `;
+        btn.addEventListener('click', () => addToKeranjang(js));
+        grid.appendChild(btn);
+      });
+    }
+
+    function addToKeranjang(jenisSampah) {
+      keranjang.push({
+        jenis_sampah_id: jenisSampah.id,
+        jenis_nama: jenisSampah.nama,
+        jumlah: '',
+        satuan: jenisSampah.satuan_default,
+        harga: jenisSampah.harga_default,
+      });
+      renderKeranjang();
+    }
+
+    function renderKeranjang() {
+      const list = document.getElementById('keranjangList');
+      list.innerHTML = '';
+
+      if (keranjang.length === 0) {
+        document.getElementById('stepKeranjang').classList.add('hidden');
+        document.getElementById('bottomActions').classList.add('hidden');
+        return;
+      }
+
+      document.getElementById('stepKeranjang').classList.remove('hidden');
+      document.getElementById('bottomActions').classList.remove('hidden');
+
+      keranjang.forEach((item, idx) => {
+        const row = document.createElement('div');
+        row.className = 'p-3 bg-gray-50 rounded-lg border border-gray-200';
+        row.innerHTML = `
+          <div class="flex items-center justify-between mb-2">
+            <div class="font-semibold text-hijau-800 text-sm">${escapeHtml(item.jenis_nama)}</div>
+            <button type="button" data-idx="${idx}" class="btn-remove text-red-500 hover:text-red-700 p-1">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="grid grid-cols-3 gap-2 items-end">
+            <div>
+              <label class="text-xs text-gray-500">Jumlah (${item.satuan})</label>
+              <input type="number" step="0.01" min="0" data-idx="${idx}" data-field="jumlah" value="${item.jumlah}" placeholder="0" class="input-item w-full px-2 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500">
+            </div>
+            <div>
+              <label class="text-xs text-gray-500">Harga/${item.satuan}</label>
+              <input type="number" min="0" data-idx="${idx}" data-field="harga" value="${item.harga}" class="input-item w-full px-2 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500">
+            </div>
+            <div class="text-right">
+              <label class="text-xs text-gray-500">Subtotal</label>
+              <div class="font-bold text-hijau-700 text-sm py-2">${formatRp((Number(item.jumlah) || 0) * (Number(item.harga) || 0))}</div>
+            </div>
+          </div>
+        `;
+        list.appendChild(row);
+      });
+
+      // Attach handlers
+      list.querySelectorAll('.btn-remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+          keranjang.splice(Number(btn.dataset.idx), 1);
+          renderKeranjang();
+        });
+      });
+      list.querySelectorAll('.input-item').forEach(inp => {
+        inp.addEventListener('input', () => {
+          const idx = Number(inp.dataset.idx);
+          const field = inp.dataset.field;
+          keranjang[idx][field] = inp.value;
+          updateGrandTotal();
+        });
+      });
+
+      // Auto-focus ke input jumlah baris terakhir yang jumlahnya masih kosong
+      const lastEmpty = list.querySelectorAll('input[data-field="jumlah"]');
+      for (const inp of lastEmpty) {
+        if (!inp.value) { setTimeout(() => inp.focus(), 100); break; }
+      }
+
+      updateGrandTotal();
+    }
+
+    function updateGrandTotal() {
+      const total = keranjang.reduce((sum, item) => 
+        sum + (Number(item.jumlah) || 0) * (Number(item.harga) || 0), 0
+      );
+      document.getElementById('grandTotal').textContent = formatRp(total);
+    }
+
+    // ==== SIMPAN SETORAN ====
+    document.getElementById('btnSimpan').addEventListener('click', simpanSetoran);
+    document.getElementById('btnBatal').addEventListener('click', () => {
+      if (confirm('Batalkan semua item di keranjang?')) resetNasabah();
+    });
+
+    async function simpanSetoran() {
+      if (!selectedNasabah || keranjang.length === 0) return;
+
+      // Validasi
+      for (const item of keranjang) {
+        if (!item.jumlah || Number(item.jumlah) <= 0) {
+          showToast('Ada item dengan jumlah kosong atau 0. Cek keranjang.', 'error', 3000);
+          return;
+        }
+        if (Number(item.harga) < 0) {
+          showToast('Harga tidak boleh negatif.', 'error', 3000);
+          return;
+        }
+      }
+
+      const btn = document.getElementById('btnSimpan');
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
+
+      const today = new Date().toISOString().split('T')[0];
+
+      try {
+        // Step 1: Insert setoran
+        const { data: setoran, error: setoranErr } = await supabase
+          .from('setoran')
+          .insert({
+            sesi_setor_id: currentSesi.id,
+            bank_sampah_id: currentPetugas.bank_sampah.id,
+            nasabah_id: selectedNasabah.id,
+            tanggal: today,
+            dibuat_oleh: currentPetugas.id,
+          })
+          .select('id')
+          .single();
+
+        if (setoranErr) throw setoranErr;
+
+        // Step 2: Insert transaksi (batch)
+        const transaksiRows = keranjang.map(item => ({
+          setoran_id: setoran.id,
+          bank_sampah_id: currentPetugas.bank_sampah.id,
+          nasabah_id: selectedNasabah.id,
+          jenis_sampah_id: item.jenis_sampah_id,
+          jumlah: Number(item.jumlah),
+          satuan: item.satuan,
+          harga_saat_transaksi: Number(item.harga),
+          total_rp: Number(item.jumlah) * Number(item.harga),
+          dibuat_oleh: currentPetugas.id,
+        }));
+
+        const { error: transaksiErr } = await supabase
+          .from('transaksi')
+          .insert(transaksiRows);
+
+        if (transaksiErr) {
+          // Rollback: hapus setoran
+          await supabase.from('setoran').delete().eq('id', setoran.id);
+          throw transaksiErr;
+        }
+
+        showToast(`Tersimpan: ${keranjang.length} item, ${formatRp(keranjang.reduce((s,i) => s + Number(i.jumlah)*Number(i.harga), 0))}`, 'success', 2500);
+        resetNasabah();
+        setTimeout(() => nasabahSearch.focus(), 300);
+
+      } catch (err) {
+        showToast('Gagal simpan: ' + err.message, 'error', 4000);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'SIMPAN & LANJUT';
+      }
+    }
+
+    // ==== QUICK ADD NASABAH ====
+    document.getElementById('btnCloseQuickAdd').addEventListener('click', closeQuickAdd);
+    document.getElementById('btnCancelQuickAdd').addEventListener('click', closeQuickAdd);
+
+    function openQuickAdd(prefillName = '') {
+      document.getElementById('qaNama').value = prefillName;
+      document.getElementById('qaRT').value = '';
+      document.getElementById('qaError').classList.add('hidden');
+      document.getElementById('modalQuickAdd').classList.remove('hidden');
+      nasabahDropdown.classList.add('hidden');
+      setTimeout(() => document.getElementById('qaNama').focus(), 100);
+    }
+
+    function closeQuickAdd() {
+      document.getElementById('modalQuickAdd').classList.add('hidden');
+    }
+
+    document.getElementById('quickAddForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nama = document.getElementById('qaNama').value.trim();
+      const rt = document.getElementById('qaRT').value.trim();
+      const err = document.getElementById('qaError');
+
+      if (!nama || !rt) {
+        err.textContent = 'Nama dan RT wajib diisi.';
+        err.classList.remove('hidden');
+        return;
+      }
+
+      const btn = document.getElementById('btnSaveQuickAdd');
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
+
+      const { data, error } = await supabase
+        .from('nasabah')
+        .insert({
+          bank_sampah_id: currentPetugas.bank_sampah.id,
+          nama, rt,
+          rw: String(currentPetugas.bank_sampah.rw),
+        })
+        .select()
+        .single();
+
+      if (error) {
+        err.textContent = 'Gagal: ' + error.message;
+        err.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Tambah & Pilih';
+        return;
+      }
+
+      // Refresh cache + pilih
+      allNasabah.unshift(data);
+      closeQuickAdd();
+      selectNasabah(data);
+      showToast('Nasabah baru ditambahkan', 'success');
+    });
+
+    // ==== UTILITY ====
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text ?? '';
+      return div.innerHTML;
+    }
+
+    // ==== BINDINGS ====
+    document.getElementById('btnMulaiSesi').addEventListener('click', mulaiSesi);
+
+    init();
+  </script>
+
+</body>
+</html>
