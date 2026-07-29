@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sistem digital Bank Sampah Kelurahan Sunggingan, Kudus. Mendukung Gerakan Pilah Sampah PKK.">
+  <title>Bank Sampah Sunggingan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'sans': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            'hijau': {
+              50:  '#F1F8F3',
+              100: '#DFF0E4',
+              200: '#B7DDC1',
+              300: '#8AC59A',
+              400: '#5FA773',
+              500: '#3A7D44',
+              600: '#2D5F3F',
+              700: '#254D33',
+              800: '#1E3F2A',
+              900: '#183321',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="font-sans bg-gradient-to-br from-hijau-50 to-white min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-white shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 bg-hijau-500 rounded-lg flex items-center justify-center">
+          <span class="text-white font-bold text-lg">BS</span>
+        </div>
+        <div>
+          <div class="font-bold text-hijau-800 text-base leading-tight">Bank Sampah</div>
+          <div class="text-hijau-600 text-xs">Kelurahan Sunggingan</div>
+        </div>
+      </div>
+      <a href="/login.html" class="bg-hijau-500 hover:bg-hijau-600 text-white font-semibold px-5 py-2.5 rounded-lg transition text-sm">
+        Masuk
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="max-w-6xl mx-auto px-4 pt-12 pb-16">
+    <div class="grid md:grid-cols-2 gap-12 items-center">
+      <div>
+        <div class="inline-block bg-hijau-100 text-hijau-700 px-3 py-1 rounded-full text-sm font-medium mb-4">
+          Kelurahan Sunggingan · Kecamatan Kota · Kabupaten Kudus
+        </div>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-hijau-900 leading-tight mb-4">
+          Sistem Digital untuk Bank Sampah Warga Sunggingan
+        </h1>
+        <p class="text-gray-700 text-lg leading-relaxed mb-6">
+          Digitalisasi pengelolaan 6 bank sampah RW di Kelurahan Sunggingan. Mempermudah pencatatan setoran, transparansi tabungan warga, dan pelaporan bulanan ke PKK Kabupaten Kudus.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="/login.html" class="bg-hijau-500 hover:bg-hijau-600 text-white font-semibold px-6 py-3 rounded-lg transition">
+            Masuk ke Sistem
+          </a>
+          <a href="#tentang" class="border-2 border-hijau-500 text-hijau-700 hover:bg-hijau-50 font-semibold px-6 py-3 rounded-lg transition">
+            Pelajari Lebih Lanjut
+          </a>
+        </div>
+      </div>
+
+      <!-- Hero card visual -->
+      <div class="bg-white rounded-2xl shadow-lg p-6 border border-hijau-100">
+        <div class="text-hijau-600 font-semibold text-sm mb-1">Rekap Bulan Ini</div>
+        <div class="text-4xl font-extrabold text-hijau-800 mb-1">- kg</div>
+        <div class="text-gray-500 text-sm mb-6">Total sampah terkumpul dari 6 RW</div>
+
+        <div class="space-y-3">
+          <div class="flex items-center justify-between p-3 bg-hijau-50 rounded-lg">
+            <div>
+              <div class="font-semibold text-hijau-800 text-sm">RW 1 · Sinar Barokah</div>
+              <div class="text-xs text-gray-500">Rintisan</div>
+            </div>
+            <div class="text-hijau-700 font-bold">— kg</div>
+          </div>
+          <div class="flex items-center justify-between p-3 bg-hijau-50 rounded-lg">
+            <div>
+              <div class="font-semibold text-hijau-800 text-sm">RW 4 · Dadi Rejo</div>
+              <div class="text-xs text-hijau-600">Ber-SK</div>
+            </div>
+            <div class="text-hijau-700 font-bold">— kg</div>
+          </div>
+          <div class="flex items-center justify-between p-3 bg-hijau-50 rounded-lg">
+            <div>
+              <div class="font-semibold text-hijau-800 text-sm">RW 5 · Setia</div>
+              <div class="text-xs text-hijau-600">Ber-SK</div>
+            </div>
+            <div class="text-hijau-700 font-bold">— kg</div>
+          </div>
+        </div>
+        <div class="text-center text-xs text-gray-400 mt-4 italic">
+          Data akan tampil setelah sistem digunakan
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tentang -->
+  <section id="tentang" class="bg-white py-16">
+    <div class="max-w-6xl mx-auto px-4">
+      <h2 class="text-3xl font-bold text-hijau-800 text-center mb-3">Untuk Siapa Sistem Ini?</h2>
+      <p class="text-gray-600 text-center mb-10 max-w-2xl mx-auto">
+        Sistem ini melayani tiga peran utama dalam ekosistem bank sampah Kelurahan Sunggingan.
+      </p>
+
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="border border-hijau-100 rounded-xl p-6 hover:shadow-md transition">
+          <div class="w-12 h-12 bg-hijau-100 rounded-lg flex items-center justify-center mb-4">
+            <span class="text-hijau-700 font-bold text-xl">1</span>
+          </div>
+          <h3 class="font-bold text-hijau-800 text-lg mb-2">Petugas Bank Sampah RW</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">
+            Input setoran nasabah dengan cepat saat sesi setor bulanan. Kelola daftar nasabah dan atur harga sampah per jenis.
+          </p>
+        </div>
+
+        <div class="border border-hijau-100 rounded-xl p-6 hover:shadow-md transition">
+          <div class="w-12 h-12 bg-hijau-100 rounded-lg flex items-center justify-center mb-4">
+            <span class="text-hijau-700 font-bold text-xl">2</span>
+          </div>
+          <h3 class="font-bold text-hijau-800 text-lg mb-2">Admin Desa / Perangkat Kelurahan</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">
+            Pantau rekap seluruh RW, generate laporan bulanan untuk PKK Kabupaten, dan kelola pencairan saldo tabungan menjelang Lebaran.
+          </p>
+        </div>
+
+        <div class="border border-hijau-100 rounded-xl p-6 hover:shadow-md transition">
+          <div class="w-12 h-12 bg-hijau-100 rounded-lg flex items-center justify-center mb-4">
+            <span class="text-hijau-700 font-bold text-xl">3</span>
+          </div>
+          <h3 class="font-bold text-hijau-800 text-lg mb-2">Koordinator PKK</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">
+            Akses data untuk pengisian Google Form Pilah Sampah PKK Kabupaten Kudus setiap tanggal 5.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 Bank Sampah -->
+  <section class="py-16 bg-hijau-50">
+    <div class="max-w-6xl mx-auto px-4">
+      <h2 class="text-3xl font-bold text-hijau-800 text-center mb-3">6 Bank Sampah Sunggingan</h2>
+      <p class="text-gray-600 text-center mb-10">
+        Terdaftar dan aktif melayani warga di masing-masing RW.
+      </p>
+
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div class="bg-white rounded-xl p-5 text-center border border-hijau-100">
+          <div class="text-hijau-600 text-xs font-semibold mb-1">RW 1</div>
+          <div class="font-bold text-hijau-800">Sinar Barokah</div>
+          <div class="text-xs text-gray-500 mt-1">Rintisan</div>
+        </div>
+        <div class="bg-white rounded-xl p-5 text-center border border-hijau-100">
+          <div class="text-hijau-600 text-xs font-semibold mb-1">RW 2</div>
+          <div class="font-bold text-hijau-800">Sumber Makmur</div>
+          <div class="text-xs text-gray-500 mt-1">Rintisan</div>
+        </div>
+        <div class="bg-white rounded-xl p-5 text-center border border-hijau-100">
+          <div class="text-hijau-600 text-xs font-semibold mb-1">RW 3</div>
+          <div class="font-bold text-hijau-800">Asik</div>
+          <div class="text-xs text-gray-500 mt-1">Rintisan</div>
+        </div>
+        <div class="bg-white rounded-xl p-5 text-center border border-hijau-100">
+          <div class="text-hijau-600 text-xs font-semibold mb-1">RW 4</div>
+          <div class="font-bold text-hijau-800">Dadi Rejo</div>
+          <div class="text-xs text-hijau-600 font-medium mt-1">Ber-SK</div>
+        </div>
+        <div class="bg-white rounded-xl p-5 text-center border border-hijau-100">
+          <div class="text-hijau-600 text-xs font-semibold mb-1">RW 5</div>
+          <div class="font-bold text-hijau-800">Setia</div>
+          <div class="text-xs text-hijau-600 font-medium mt-1">Ber-SK</div>
+        </div>
+        <div class="bg-white rounded-xl p-5 text-center border border-hijau-100">
+          <div class="text-hijau-600 text-xs font-semibold mb-1">RW 6</div>
+          <div class="font-bold text-hijau-800">Berkah</div>
+          <div class="text-xs text-gray-500 mt-1">Rintisan</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-16 bg-hijau-500">
+    <div class="max-w-3xl mx-auto px-4 text-center">
+      <h2 class="text-3xl font-bold text-white mb-3">Siap Masuk ke Sistem?</h2>
+      <p class="text-hijau-100 mb-6">
+        Akses akun petugas atau admin desa Anda untuk mulai mengelola data.
+      </p>
+      <a href="/login.html" class="inline-block bg-white text-hijau-700 hover:bg-hijau-50 font-bold px-8 py-3 rounded-lg transition">
+        Masuk ke Sistem
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-hijau-800 text-hijau-100 py-8">
+    <div class="max-w-6xl mx-auto px-4 text-center text-sm space-y-2">
+      <p class="font-semibold">Bank Sampah Sunggingan</p>
+      <p class="text-hijau-200">Kelurahan Sunggingan · Kecamatan Kota · Kabupaten Kudus</p>
+      <p class="text-xs text-hijau-300 mt-4">
+        Mendukung Instruksi Bupati Kudus No. 600.4.14/01/2025 tentang Gerakan Pilah Sampah
+      </p>
+      <p class="text-xs text-hijau-400">
+        Sistem dikembangkan oleh Tim KKN 2026 · Powered by Supabase & Cloudflare Pages
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>

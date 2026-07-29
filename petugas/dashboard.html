@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Petugas · Bank Sampah Sunggingan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { 'sans': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'] },
+          colors: {
+            'hijau': {
+              50: '#F1F8F3', 100: '#DFF0E4', 200: '#B7DDC1', 300: '#8AC59A',
+              400: '#5FA773', 500: '#3A7D44', 600: '#2D5F3F', 700: '#254D33',
+              800: '#1E3F2A', 900: '#183321',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="font-sans bg-hijau-50 min-h-screen">
+
+  <!-- Loading state (default) -->
+  <div id="loadingState" class="min-h-screen flex items-center justify-center">
+    <div class="text-center">
+      <div class="w-12 h-12 border-4 border-hijau-200 border-t-hijau-500 rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-hijau-700 font-medium">Memuat data...</p>
+    </div>
+  </div>
+
+  <!-- Main content (hidden until auth verified) -->
+  <div id="mainContent" class="hidden">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-hijau-100">
+      <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-hijau-500 rounded-lg flex items-center justify-center">
+            <span class="text-white font-bold text-sm">BS</span>
+          </div>
+          <div>
+            <div class="font-bold text-hijau-800 text-sm leading-tight" id="bankSampahName">Bank Sampah</div>
+            <div class="text-hijau-600 text-xs" id="userName">Petugas</div>
+          </div>
+        </div>
+        <button id="logoutBtn" class="text-hijau-700 hover:text-hijau-800 text-sm font-semibold">
+          Keluar
+        </button>
+      </div>
+    </header>
+
+    <!-- Welcome card -->
+    <main class="max-w-4xl mx-auto px-4 py-8">
+      <div class="bg-white rounded-2xl shadow-sm p-8 border border-hijau-100 text-center">
+        <div class="w-16 h-16 bg-hijau-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <span class="text-hijau-700 text-2xl">✓</span>
+        </div>
+        <h1 class="text-2xl font-bold text-hijau-800 mb-2">Selamat Datang!</h1>
+        <p class="text-gray-600 mb-1">
+          Anda masuk sebagai <span class="font-semibold" id="welcomeName">Petugas</span>
+        </p>
+        <p class="text-gray-500 text-sm mb-6">
+          Bank Sampah <span class="font-medium" id="welcomeBankSampah">-</span>
+        </p>
+
+        <div class="bg-hijau-50 border border-hijau-200 rounded-lg p-4 text-left">
+          <p class="text-hijau-800 font-semibold mb-2">🚧 Halaman Sedang Dibangun</p>
+          <p class="text-hijau-700 text-sm">
+            Dashboard petugas dengan fitur input transaksi (basket mode), rekap sesi, dan master data akan tersedia segera.
+          </p>
+        </div>
+
+        <div class="mt-6 pt-6 border-t border-gray-200 text-left">
+          <p class="text-xs text-gray-500 font-semibold mb-2">Info Debug (untuk testing):</p>
+          <pre id="debugInfo" class="text-xs bg-gray-50 p-3 rounded overflow-auto text-gray-700"></pre>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <script type="module">
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '/shared/config.js';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
+
+    async function init() {
+      // Cek session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      // Get petugas info
+      const { data: petugas, error } = await supabase
+        .from('petugas')
+        .select('*, bank_sampah(*)')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error || !petugas) {
+        alert('Data petugas tidak ditemukan. Silakan hubungi admin.');
+        await supabase.auth.signOut();
+        window.location.href = '/login.html';
+        return;
+      }
+
+      // Verify role
+      if (petugas.role !== 'petugas_rw') {
+        alert('Akun Anda bukan petugas RW. Silakan login ulang.');
+        await supabase.auth.signOut();
+        window.location.href = '/login.html';
+        return;
+      }
+
+      // Populate UI
+      document.getElementById('userName').textContent = petugas.nama;
+      document.getElementById('welcomeName').textContent = petugas.nama;
+      document.getElementById('bankSampahName').textContent = 'Bank Sampah ' + (petugas.bank_sampah?.nama || '-');
+      document.getElementById('welcomeBankSampah').textContent = (petugas.bank_sampah?.nama || '-') + ' (RW ' + (petugas.bank_sampah?.rw || '-') + ')';
+      
+      document.getElementById('debugInfo').textContent = JSON.stringify({
+        role: petugas.role,
+        nama: petugas.nama,
+        email: petugas.email,
+        bank_sampah: petugas.bank_sampah?.nama,
+        rw: petugas.bank_sampah?.rw
+      }, null, 2);
+
+      // Show content, hide loading
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+    }
+
+    // Logout handler
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      window.location.href = '/login.html';
+    });
+
+    init();
+  </script>
+
+</body>
+</html>

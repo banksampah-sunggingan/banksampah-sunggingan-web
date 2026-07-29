@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Masuk · Bank Sampah Sunggingan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'sans': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            'hijau': {
+              50:  '#F1F8F3', 100: '#DFF0E4', 200: '#B7DDC1', 300: '#8AC59A',
+              400: '#5FA773', 500: '#3A7D44', 600: '#2D5F3F', 700: '#254D33',
+              800: '#1E3F2A', 900: '#183321',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="font-sans bg-gradient-to-br from-hijau-50 to-white min-h-screen flex flex-col">
+
+  <!-- Header simpel -->
+  <header class="py-6 px-4">
+    <div class="max-w-md mx-auto flex items-center gap-3">
+      <a href="/" class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-hijau-500 rounded-lg flex items-center justify-center">
+          <span class="text-white font-bold">BS</span>
+        </div>
+        <div>
+          <div class="font-bold text-hijau-800 text-sm leading-tight">Bank Sampah</div>
+          <div class="text-hijau-600 text-xs">Kelurahan Sunggingan</div>
+        </div>
+      </a>
+    </div>
+  </header>
+
+  <!-- Login card -->
+  <main class="flex-1 flex items-center justify-center px-4 py-6">
+    <div class="w-full max-w-md">
+      <div class="bg-white rounded-2xl shadow-lg p-8 border border-hijau-100">
+        <h1 class="text-2xl font-bold text-hijau-800 mb-1">Masuk ke Sistem</h1>
+        <p class="text-gray-600 text-sm mb-6">
+          Gunakan email dan password yang telah diberikan oleh admin.
+        </p>
+
+        <form id="loginForm" class="space-y-4">
+          <div>
+            <label for="email" class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              required
+              autocomplete="email"
+              placeholder="contoh@email.com"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hijau-500 focus:border-hijau-500 text-base"
+            >
+          </div>
+
+          <div>
+            <label for="password" class="block text-sm font-semibold text-gray-700 mb-1.5">
+              Password
+            </label>
+            <div class="relative">
+              <input
+                type="password"
+                id="password"
+                name="password"
+                required
+                autocomplete="current-password"
+                placeholder="Masukkan password"
+                class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hijau-500 focus:border-hijau-500 text-base"
+              >
+              <button
+                type="button"
+                id="togglePassword"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-hijau-600 text-sm font-medium"
+              >
+                Lihat
+              </button>
+            </div>
+          </div>
+
+          <!-- Error message -->
+          <div id="errorMsg" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm"></div>
+
+          <button
+            type="submit"
+            id="submitBtn"
+            class="w-full bg-hijau-500 hover:bg-hijau-600 text-white font-semibold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed text-base"
+          >
+            Masuk
+          </button>
+        </form>
+
+        <div class="mt-6 pt-6 border-t border-gray-200 text-center">
+          <p class="text-xs text-gray-500">
+            Lupa password atau butuh akun? Hubungi admin desa.
+          </p>
+        </div>
+      </div>
+
+      <div class="text-center mt-6">
+        <a href="/" class="text-hijau-600 hover:text-hijau-700 text-sm font-medium">
+          ← Kembali ke Beranda
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="py-4 text-center text-xs text-gray-500">
+    <p>© 2026 Bank Sampah Kelurahan Sunggingan</p>
+  </footer>
+
+  <script type="module">
+    // Import config + supabase client
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '/shared/config.js';
+
+    // Init Supabase client
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
+
+    // Elements
+    const form = document.getElementById('loginForm');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorMsg = document.getElementById('errorMsg');
+    const togglePassword = document.getElementById('togglePassword');
+
+    // Toggle password visibility
+    togglePassword.addEventListener('click', () => {
+      const isPassword = passwordInput.type === 'password';
+      passwordInput.type = isPassword ? 'text' : 'password';
+      togglePassword.textContent = isPassword ? 'Sembunyikan' : 'Lihat';
+    });
+
+    // Auto-redirect kalau udah login
+    async function checkExistingSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await redirectByRole();
+      }
+    }
+
+    // Redirect user based on role
+    async function redirectByRole() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: petugas, error } = await supabase
+        .from('petugas')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (error || !petugas) {
+        showError('Akun Anda belum terdaftar di sistem. Hubungi admin.');
+        await supabase.auth.signOut();
+        return;
+      }
+
+      // Redirect sesuai role
+      if (petugas.role === 'admin_desa' || petugas.role === 'koordinator_pkk') {
+        window.location.href = '/admin/dashboard.html';
+      } else if (petugas.role === 'petugas_rw') {
+        window.location.href = '/petugas/dashboard.html';
+      } else {
+        showError('Role tidak dikenali. Hubungi admin.');
+      }
+    }
+
+    // Handle login submit
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      if (!email || !password) {
+        showError('Email dan password wajib diisi.');
+        return;
+      }
+
+      // Loading state
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Memproses...';
+
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email, password
+        });
+
+        if (error) {
+          if (error.message.includes('Invalid login credentials')) {
+            showError('Email atau password salah. Silakan coba lagi.');
+          } else if (error.message.includes('Email not confirmed')) {
+            showError('Email belum diverifikasi. Hubungi admin.');
+          } else {
+            showError('Gagal masuk: ' + error.message);
+          }
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Masuk';
+          return;
+        }
+
+        // Login sukses, redirect sesuai role
+        await redirectByRole();
+
+      } catch (err) {
+        console.error(err);
+        showError('Terjadi kesalahan. Silakan coba lagi.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Masuk';
+      }
+    });
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.classList.remove('hidden');
+    }
+
+    function hideError() {
+      errorMsg.classList.add('hidden');
+      errorMsg.textContent = '';
+    }
+
+    // Cek session pas load
+    checkExistingSession();
+  </script>
+
+</body>
+</html>
