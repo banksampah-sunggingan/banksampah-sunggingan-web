@@ -99,14 +99,34 @@
         <!-- List setoran -->
         <div id="setoranList" class="space-y-3"></div>
 
-        <!-- Empty state -->
-        <div id="emptySetoran" class="hidden bg-white rounded-xl p-8 text-center shadow-sm border border-hijau-100">
+        <!-- Empty state - open session -->
+        <div id="emptySetoranOpen" class="hidden bg-white rounded-xl p-8 text-center shadow-sm border border-hijau-100">
           <div class="text-4xl mb-3">🛍️</div>
           <p class="text-gray-600 font-medium mb-1">Belum ada setoran hari ini</p>
           <p class="text-gray-500 text-sm mb-4">Klik tombol di bawah untuk input setoran pertama.</p>
           <a href="/petugas/input-transaksi.html" class="inline-block bg-hijau-500 hover:bg-hijau-600 text-white font-semibold px-5 py-2.5 rounded-lg transition text-sm">
             Input Setoran
           </a>
+        </div>
+
+        <!-- Empty state - closed session -->
+        <div id="emptySetoranClosed" class="hidden bg-white rounded-xl p-8 text-center shadow-sm border border-gray-200">
+          <div class="text-4xl mb-3">🔒</div>
+          <p class="text-gray-600 font-medium mb-1">Sesi ini kosong dan sudah ditutup</p>
+          <p class="text-gray-500 text-sm">Tidak ada setoran yang tercatat.</p>
+        </div>
+
+        <!-- Closed session action card (Kembali + Hapus jika kosong) -->
+        <div id="closedSesiAction" class="hidden mt-6 bg-white rounded-xl p-5 shadow-sm border border-hijau-100">
+          <p class="text-gray-600 text-sm mb-4 text-center">Sesi setor hari ini sudah ditutup.</p>
+          <div class="flex flex-col sm:flex-row gap-2 justify-center">
+            <button id="btnHapusSesiClosed" class="hidden py-3 px-6 border-2 border-red-300 text-red-600 rounded-xl font-bold hover:bg-red-50 transition text-sm">
+              HAPUS SESI KOSONG
+            </button>
+            <a href="/petugas/dashboard.html" class="inline-block bg-hijau-500 hover:bg-hijau-600 text-white font-bold px-8 py-3 rounded-xl transition text-base text-center">
+              KEMBALI KE DASHBOARD
+            </a>
+          </div>
         </div>
 
       </div>
@@ -300,6 +320,7 @@
         statusLabel.className = 'text-xs font-semibold mb-1 text-hijau-100';
         statsGrid.className = 'grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-hijau-400';
         document.getElementById('bottomActions').classList.remove('hidden');
+        document.getElementById('closedSesiAction').classList.add('hidden');
         // Show Batal Sesi button only if 0 setoran
         const btnBatal = document.getElementById('btnBatalSesi');
         if (setoranList.length === 0) {
@@ -315,6 +336,14 @@
         statusLabel.className = 'text-xs font-semibold mb-1 text-gray-500';
         statsGrid.className = 'grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-200';
         document.getElementById('bottomActions').classList.add('hidden');
+        document.getElementById('closedSesiAction').classList.remove('hidden');
+        // Show Hapus Sesi Kosong button only if 0 setoran
+        const btnHapusClosed = document.getElementById('btnHapusSesiClosed');
+        if (setoranList.length === 0) {
+          btnHapusClosed.classList.remove('hidden');
+        } else {
+          btnHapusClosed.classList.add('hidden');
+        }
       }
 
       document.getElementById('sesiDate').textContent = formatTanggal(currentSesi.tanggal);
@@ -343,13 +372,21 @@
 
       // Render setoran list
       const list = document.getElementById('setoranList');
-      const emptyState = document.getElementById('emptySetoran');
+      const emptyOpen = document.getElementById('emptySetoranOpen');
+      const emptyClosed = document.getElementById('emptySetoranClosed');
 
       if (setoranList.length === 0) {
         list.innerHTML = '';
-        emptyState.classList.remove('hidden');
+        if (currentSesi.status === 'open') {
+          emptyOpen.classList.remove('hidden');
+          emptyClosed.classList.add('hidden');
+        } else {
+          emptyOpen.classList.add('hidden');
+          emptyClosed.classList.remove('hidden');
+        }
       } else {
-        emptyState.classList.add('hidden');
+        emptyOpen.classList.add('hidden');
+        emptyClosed.classList.add('hidden');
         list.innerHTML = '';
         setoranList.forEach(s => list.appendChild(makeSetoranCard(s)));
       }
@@ -497,6 +534,24 @@
       document.getElementById('modalBatal').classList.add('hidden');
       // Redirect ke dashboard setelah batal sesi
       setTimeout(() => { window.location.href = '/petugas/dashboard.html'; }, 800);
+    });
+
+    // ==== HAPUS SESI KOSONG (untuk sesi CLOSED yang kosong) ====
+    // Reuse modal batal, cuma ubah label + wording
+    document.getElementById('btnHapusSesiClosed').addEventListener('click', () => {
+      if (setoranList.length > 0) {
+        alert('Sesi ini sudah ada setoran, tidak bisa dihapus.');
+        return;
+      }
+      // Ubah label modal jadi konteks "hapus" 
+      document.querySelector('#modalBatal h2').textContent = 'Hapus Sesi Kosong?';
+      document.querySelector('#modalBatal p').textContent = 
+        'Sesi kosong ini akan dihapus dari sistem. Gunakan opsi ini untuk membersihkan sesi yang salah tercatat.';
+      document.getElementById('btnConfirmBatal').textContent = 'Ya, Hapus Sesi';
+      document.getElementById('batalReason').value = '';
+      document.getElementById('batalReason').placeholder = 'Contoh: Sesi salah tanggal, tidak ada nasabah datang';
+      document.getElementById('batalError').classList.add('hidden');
+      document.getElementById('modalBatal').classList.remove('hidden');
     });
 
     // ==== DELETE SETORAN ====
