@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buku Tabungan Tahunan · Bank Sampah Sunggingan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { 'sans': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'] }, colors: { 'hijau': { 50: '#F1F8F3', 100: '#DFF0E4', 200: '#B7DDC1', 300: '#8AC59A', 400: '#5FA773', 500: '#3A7D44', 600: '#2D5F3F', 700: '#254D33', 800: '#1E3F2A', 900: '#183321' } } } } }
+  </script>
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #printSection, #printSection * { visibility: visible; }
+      #printSection { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="font-sans bg-hijau-50 min-h-screen">
+
+  <div id="loadingState" class="min-h-screen flex items-center justify-center no-print">
+    <div class="text-center">
+      <div class="w-12 h-12 border-4 border-hijau-200 border-t-hijau-500 rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-hijau-700 font-medium">Memuat data tahunan...</p>
+    </div>
+  </div>
+
+  <div id="mainContent" class="hidden pb-8">
+    <header class="bg-white shadow-sm border-b border-hijau-100 sticky top-0 z-40 no-print">
+      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="/petugas/dashboard.html" class="flex items-center gap-1 text-hijau-700 hover:text-hijau-800 hover:bg-hijau-50 px-3 py-2 rounded-lg -ml-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+            <span class="font-semibold text-sm">Kembali</span>
+          </a>
+          <div>
+            <div class="font-bold text-hijau-800 text-base">Buku Tabungan Tahunan</div>
+            <div class="text-hijau-600 text-xs" id="bankSampahName">-</div>
+          </div>
+        </div>
+        <button id="btnPrint" class="flex items-center gap-1 bg-hijau-500 hover:bg-hijau-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          Cetak Daftar Pencairan
+        </button>
+      </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-4 no-print">
+      <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4 text-sm text-yellow-800">
+        ⓘ Daftar ini adalah buku tabungan digital. Untuk pencairan Lebaran, cetak halaman ini sebagai daftar tanda tangan pencairan yang bisa disubmit ke admin desa.
+      </div>
+
+      <div class="flex items-center gap-3 mb-4">
+        <label class="text-sm font-semibold text-gray-700">Tahun:</label>
+        <select id="filterTahun" class="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-hijau-500"></select>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-hijau-100">
+          <div class="text-xs text-gray-500 font-medium mb-1">Nasabah Aktif</div>
+          <div class="text-2xl font-bold text-hijau-800" id="statNasabah">0</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-hijau-100">
+          <div class="text-xs text-gray-500 font-medium mb-1">Total Setoran</div>
+          <div class="text-2xl font-bold text-hijau-800" id="statSetoran">0</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-hijau-100">
+          <div class="text-xs text-gray-500 font-medium mb-1">Total Volume</div>
+          <div class="text-2xl font-bold text-hijau-800" id="statVolume">0 kg</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-hijau-100">
+          <div class="text-xs text-gray-500 font-medium mb-1">Total Saldo</div>
+          <div class="text-2xl font-bold text-hijau-700" id="statSaldo">Rp 0</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-3 mb-4 shadow-sm border border-hijau-100 flex items-center gap-3 flex-wrap">
+        <input type="text" id="searchInput" placeholder="Cari nama nasabah..." class="flex-1 min-w-[200px] px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500">
+        <select id="sortBy" class="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-hijau-500">
+          <option value="saldo_desc">Saldo Tertinggi</option>
+          <option value="saldo_asc">Saldo Terendah</option>
+          <option value="nama_asc">Nama A-Z</option>
+          <option value="nama_desc">Nama Z-A</option>
+          <option value="setoran_desc">Setoran Terbanyak</option>
+        </select>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-hijau-100 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="text-left px-4 py-3 font-semibold text-gray-600 w-12">No</th>
+                <th class="text-left px-4 py-3 font-semibold text-gray-600">Nama Nasabah</th>
+                <th class="text-center px-4 py-3 font-semibold text-gray-600">RT</th>
+                <th class="text-right px-4 py-3 font-semibold text-gray-600">Setoran</th>
+                <th class="text-right px-4 py-3 font-semibold text-gray-600">Volume</th>
+                <th class="text-right px-4 py-3 font-semibold text-gray-600">Saldo</th>
+                <th class="text-center px-4 py-3 font-semibold text-gray-600">Detail</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+        <div id="emptyState" class="hidden p-8 text-center text-gray-500">
+          <div class="text-4xl mb-2">📖</div>
+          <p>Belum ada transaksi di tahun ini.</p>
+        </div>
+      </div>
+    </main>
+
+    <div id="printSection" class="hidden bg-white p-8">
+      <div class="text-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">DAFTAR PENCAIRAN TABUNGAN BANK SAMPAH</h1>
+        <p class="text-lg font-semibold mt-1" id="printBankSampah">-</p>
+        <p class="text-sm text-gray-600 mt-1" id="printPeriode">-</p>
+      </div>
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr class="border-2 border-gray-800">
+            <th class="border border-gray-800 px-2 py-2 text-left w-12">No</th>
+            <th class="border border-gray-800 px-2 py-2 text-left">Nama Nasabah</th>
+            <th class="border border-gray-800 px-2 py-2 text-center w-16">RT</th>
+            <th class="border border-gray-800 px-2 py-2 text-right w-32">Saldo</th>
+            <th class="border border-gray-800 px-2 py-2 text-center w-40">Tanda Tangan</th>
+          </tr>
+        </thead>
+        <tbody id="printBody"></tbody>
+        <tfoot>
+          <tr class="border-2 border-gray-800 font-bold">
+            <td class="border border-gray-800 px-2 py-2" colspan="3">TOTAL PENCAIRAN</td>
+            <td class="border border-gray-800 px-2 py-2 text-right" id="printTotal">-</td>
+            <td class="border border-gray-800 px-2 py-2"></td>
+          </tr>
+        </tfoot>
+      </table>
+      <div class="mt-8 grid grid-cols-2 gap-8 text-sm">
+        <div class="text-center">
+          <p>Ketua Bank Sampah</p>
+          <div class="h-20"></div>
+          <p class="border-t border-gray-800 pt-1">(_______________________)</p>
+        </div>
+        <div class="text-center">
+          <p>Petugas Pencatat</p>
+          <div class="h-20"></div>
+          <p class="border-t border-gray-800 pt-1" id="printPetugasName">(_______________________)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalDetail" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 no-print">
+    <div class="bg-white max-w-2xl w-full rounded-2xl max-h-[90vh] overflow-y-auto">
+      <div class="p-5 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
+        <div>
+          <h2 class="font-bold text-hijau-800 text-lg" id="detailNama">-</h2>
+          <p class="text-xs text-gray-500 mt-0.5" id="detailInfo">-</p>
+        </div>
+        <button id="btnCloseDetail" class="text-gray-500 hover:text-gray-700 p-1">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-5">
+        <div class="grid grid-cols-3 gap-2 mb-4">
+          <div class="bg-hijau-50 rounded-lg p-3 text-center"><div class="text-xs text-gray-500">Setoran</div><div class="text-lg font-bold text-hijau-800" id="detailStatSetoran">0</div></div>
+          <div class="bg-hijau-50 rounded-lg p-3 text-center"><div class="text-xs text-gray-500">Volume</div><div class="text-lg font-bold text-hijau-800" id="detailStatVolume">0 kg</div></div>
+          <div class="bg-hijau-50 rounded-lg p-3 text-center"><div class="text-xs text-gray-500">Saldo</div><div class="text-lg font-bold text-hijau-700" id="detailStatSaldo">Rp 0</div></div>
+        </div>
+        <h3 class="font-semibold text-gray-800 mb-2">Riwayat Transaksi</h3>
+        <div id="detailTimeline" class="space-y-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '/shared/config.js';
+    import { formatRp, formatTanggal } from '/shared/utils.js';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+    let currentPetugas = null;
+    let currentTahun = new Date().getFullYear();
+    let allNasabahData = [];
+
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return window.location.href = '/login.html';
+      const { data: petugas, error } = await supabase.from('petugas').select('*, bank_sampah(*)').eq('id', session.user.id).single();
+      if (error || !petugas || petugas.role !== 'petugas_rw') {
+        alert('Akses tidak valid.');
+        return window.location.href = '/login.html';
+      }
+      currentPetugas = petugas;
+      document.getElementById('bankSampahName').textContent = 'Bank Sampah ' + petugas.bank_sampah.nama + ' · RW ' + petugas.bank_sampah.rw;
+      document.getElementById('printBankSampah').textContent = 'Bank Sampah ' + petugas.bank_sampah.nama + ' · RW ' + petugas.bank_sampah.rw;
+      document.getElementById('printPetugasName').textContent = '(' + petugas.nama + ')';
+      setupFilters();
+      await loadData();
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+    }
+
+    function setupFilters() {
+      const tahunSelect = document.getElementById('filterTahun');
+      const thisYear = new Date().getFullYear();
+      for (let y = thisYear - 3; y <= thisYear + 1; y++) {
+        const opt = document.createElement('option'); opt.value = y; opt.textContent = y;
+        if (y === currentTahun) opt.selected = true;
+        tahunSelect.appendChild(opt);
+      }
+      tahunSelect.addEventListener('change', async (e) => { currentTahun = Number(e.target.value); await loadData(); });
+      document.getElementById('searchInput').addEventListener('input', render);
+      document.getElementById('sortBy').addEventListener('change', render);
+    }
+
+    async function loadData() {
+      const bankSampahId = currentPetugas.bank_sampah.id;
+      const startDate = new Date(currentTahun, 0, 1).toISOString().split('T')[0];
+      const endDate = new Date(currentTahun, 11, 31).toISOString().split('T')[0];
+      document.getElementById('printPeriode').textContent = `Periode: 1 Januari - 31 Desember ${currentTahun}`;
+
+      const { data: nasabah } = await supabase.from('nasabah').select('*').eq('bank_sampah_id', bankSampahId).is('deleted_at', null).order('nama');
+      const { data: setoran } = await supabase.from('setoran').select('nasabah_id, total_rp, tanggal, id').eq('bank_sampah_id', bankSampahId).is('deleted_at', null).gte('tanggal', startDate).lte('tanggal', endDate);
+      const { data: transaksi } = await supabase.from('transaksi').select('setoran_id, jumlah, satuan, harga_saat_transaksi, total_rp, jenis_sampah_id, jenis_sampah(nama)').eq('bank_sampah_id', bankSampahId).is('deleted_at', null).gte('created_at', startDate + 'T00:00:00').lte('created_at', endDate + 'T23:59:59');
+      const { data: penarikan } = await supabase.from('penarikan').select('nasabah_id, jumlah_ditarik, tanggal').eq('bank_sampah_id', bankSampahId).is('deleted_at', null).gte('tanggal', startDate).lte('tanggal', endDate);
+
+      const perNasabah = {};
+      (nasabah || []).forEach(n => {
+        if (n.is_default) return;
+        perNasabah[n.id] = { ...n, setoranCount: 0, totalKg: 0, totalSetoran: 0, totalPenarikan: 0, setoranList: [], transaksiList: [] };
+      });
+      (setoran || []).forEach(s => {
+        if (!perNasabah[s.nasabah_id]) return;
+        perNasabah[s.nasabah_id].setoranCount++;
+        perNasabah[s.nasabah_id].totalSetoran += Number(s.total_rp || 0);
+        perNasabah[s.nasabah_id].setoranList.push(s);
+      });
+      const setoranIdToNasabah = {};
+      (setoran || []).forEach(s => { setoranIdToNasabah[s.id] = s.nasabah_id; });
+      (transaksi || []).forEach(t => {
+        const nasabahId = setoranIdToNasabah[t.setoran_id];
+        if (!perNasabah[nasabahId]) return;
+        if (t.satuan === 'kg') perNasabah[nasabahId].totalKg += Number(t.jumlah || 0);
+        perNasabah[nasabahId].transaksiList.push({ ...t, nasabah_id: nasabahId });
+      });
+      (penarikan || []).forEach(p => {
+        if (!perNasabah[p.nasabah_id]) return;
+        perNasabah[p.nasabah_id].totalPenarikan += Number(p.jumlah_ditarik || 0);
+      });
+
+      allNasabahData = Object.values(perNasabah).map(n => ({ ...n, saldo: n.totalSetoran - n.totalPenarikan }));
+
+      const nasabahAktif = allNasabahData.filter(n => n.setoranCount > 0).length;
+      const totalSetoranCount = allNasabahData.reduce((s, n) => s + n.setoranCount, 0);
+      const totalKg = allNasabahData.reduce((s, n) => s + n.totalKg, 0);
+      const totalSaldo = allNasabahData.reduce((s, n) => s + n.saldo, 0);
+      document.getElementById('statNasabah').textContent = nasabahAktif;
+      document.getElementById('statSetoran').textContent = totalSetoranCount;
+      document.getElementById('statVolume').textContent = totalKg.toFixed(1) + ' kg';
+      document.getElementById('statSaldo').textContent = formatRp(totalSaldo);
+
+      render();
+    }
+
+    function render() {
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      const sort = document.getElementById('sortBy').value;
+      let filtered = allNasabahData.filter(n => !q || n.nama.toLowerCase().includes(q));
+      switch (sort) {
+        case 'saldo_desc': filtered.sort((a, b) => b.saldo - a.saldo); break;
+        case 'saldo_asc': filtered.sort((a, b) => a.saldo - b.saldo); break;
+        case 'nama_asc': filtered.sort((a, b) => a.nama.localeCompare(b.nama)); break;
+        case 'nama_desc': filtered.sort((a, b) => b.nama.localeCompare(a.nama)); break;
+        case 'setoran_desc': filtered.sort((a, b) => b.setoranCount - a.setoranCount); break;
+      }
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+      const emptyState = document.getElementById('emptyState');
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+      filtered.forEach((n, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50';
+        const saldoClass = n.saldo > 0 ? 'text-hijau-700' : 'text-gray-400';
+        tr.innerHTML = `
+          <td class="px-4 py-3 text-gray-500">${idx + 1}</td>
+          <td class="px-4 py-3 font-semibold text-gray-800">${escapeHtml(n.nama)}</td>
+          <td class="px-4 py-3 text-center text-gray-600">${escapeHtml(n.rt || '-')}</td>
+          <td class="px-4 py-3 text-right text-gray-800">${n.setoranCount}x</td>
+          <td class="px-4 py-3 text-right text-gray-800">${n.totalKg.toFixed(1)} kg</td>
+          <td class="px-4 py-3 text-right font-bold ${saldoClass}">${formatRp(n.saldo)}</td>
+          <td class="px-4 py-3 text-center">
+            <button data-id="${n.id}" class="btn-detail text-hijau-700 hover:text-hijau-800 font-semibold text-xs">Lihat →</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.querySelectorAll('.btn-detail').forEach(btn => {
+        btn.addEventListener('click', () => showDetail(btn.dataset.id));
+      });
+    }
+
+    function showDetail(nasabahId) {
+      const n = allNasabahData.find(x => x.id === nasabahId);
+      if (!n) return;
+      document.getElementById('detailNama').textContent = n.nama;
+      document.getElementById('detailInfo').textContent = `RT ${n.rt || '-'}${n.dawis ? ' · ' + n.dawis : ''} · Tahun ${currentTahun}`;
+      document.getElementById('detailStatSetoran').textContent = n.setoranCount + 'x';
+      document.getElementById('detailStatVolume').textContent = n.totalKg.toFixed(1) + ' kg';
+      document.getElementById('detailStatSaldo').textContent = formatRp(n.saldo);
+      const timeline = document.getElementById('detailTimeline');
+      timeline.innerHTML = '';
+      if (n.setoranList.length === 0) {
+        timeline.innerHTML = '<div class="text-sm text-gray-500 text-center py-4">Belum ada setoran tahun ini.</div>';
+      } else {
+        const sorted = [...n.setoranList].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+        sorted.forEach(s => {
+          const items = n.transaksiList.filter(t => t.setoran_id === s.id);
+          const itemsHtml = items.map(t => `<div class="text-xs text-gray-600 flex justify-between"><span>${escapeHtml(t.jenis_sampah?.nama || '-')} ${Number(t.jumlah).toFixed(2)} ${t.satuan} × ${formatRp(t.harga_saat_transaksi)}</span><span class="font-semibold text-hijau-700">${formatRp(t.total_rp)}</span></div>`).join('');
+          const card = document.createElement('div');
+          card.className = 'border border-gray-200 rounded-lg p-3';
+          card.innerHTML = `
+            <div class="flex items-center justify-between mb-2 pb-2 border-b border-gray-100">
+              <span class="text-sm font-semibold text-hijau-800">${formatTanggal(s.tanggal)}</span>
+              <span class="text-sm font-bold text-hijau-700">${formatRp(s.total_rp)}</span>
+            </div>
+            <div class="space-y-1">${itemsHtml || '<div class="text-xs text-gray-400">Tidak ada detail item.</div>'}</div>
+          `;
+          timeline.appendChild(card);
+        });
+      }
+      document.getElementById('modalDetail').classList.remove('hidden');
+    }
+
+    document.getElementById('btnCloseDetail').addEventListener('click', () => {
+      document.getElementById('modalDetail').classList.add('hidden');
+    });
+
+    document.getElementById('btnPrint').addEventListener('click', () => {
+      const printBody = document.getElementById('printBody');
+      printBody.innerHTML = '';
+      const eligible = allNasabahData.filter(n => n.saldo > 0).sort((a, b) => b.saldo - a.saldo);
+      let total = 0;
+      eligible.forEach((n, idx) => {
+        total += n.saldo;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="border border-gray-800 px-2 py-2">${idx + 1}</td>
+          <td class="border border-gray-800 px-2 py-2">${escapeHtml(n.nama)}</td>
+          <td class="border border-gray-800 px-2 py-2 text-center">${escapeHtml(n.rt || '-')}</td>
+          <td class="border border-gray-800 px-2 py-2 text-right">${formatRp(n.saldo)}</td>
+          <td class="border border-gray-800 px-2 py-2"></td>
+        `;
+        printBody.appendChild(tr);
+      });
+      document.getElementById('printTotal').textContent = formatRp(total);
+      document.getElementById('printSection').classList.remove('hidden');
+      setTimeout(() => { window.print(); document.getElementById('printSection').classList.add('hidden'); }, 100);
+    });
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text ?? '';
+      return div.innerHTML;
+    }
+
+    init();
+  </script>
+</body>
+</html>
