@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Log · Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { 'sans': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'] }, colors: { 'hijau': { 50: '#F1F8F3', 100: '#DFF0E4', 200: '#B7DDC1', 300: '#8AC59A', 400: '#5FA773', 500: '#3A7D44', 600: '#2D5F3F', 700: '#254D33', 800: '#1E3F2A', 900: '#183321' } } } } }
+  </script>
+</head>
+<body class="font-sans bg-gray-50 min-h-screen">
+
+  <div id="loadingState" class="min-h-screen flex items-center justify-center">
+    <div class="text-center">
+      <div class="w-12 h-12 border-4 border-hijau-200 border-t-hijau-500 rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-hijau-700 font-medium">Memuat audit log...</p>
+    </div>
+  </div>
+
+  <div id="mainContent" class="hidden">
+    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+      <div class="px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-hijau-500 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">BS</span></div>
+          <div><div class="font-bold text-hijau-800 text-sm leading-tight">Bank Sampah Sunggingan</div><div class="text-gray-500 text-xs">Audit Log</div></div>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="text-right"><div class="font-semibold text-gray-800 text-sm" id="userName">-</div><div class="text-xs text-gray-500" id="userRole">-</div></div>
+          <button id="logoutBtn" class="flex items-center gap-1 text-hijau-700 hover:text-hijau-800 hover:bg-hijau-50 px-3 py-2 rounded-lg text-sm font-semibold">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Keluar
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="flex">
+      <aside class="w-60 bg-white border-r border-gray-200 min-h-[calc(100vh-64px)] sticky top-16">
+        <nav class="p-3 space-y-1" id="sidebar-nav"></nav>
+      </aside>
+
+      <main class="flex-1 p-6">
+        <div class="mb-6">
+          <h1 class="text-2xl font-bold text-gray-800">Audit Log</h1>
+          <p class="text-sm text-gray-500 mt-0.5">Jejak semua perubahan data · Tidak bisa dihapus atau diubah</p>
+        </div>
+
+        <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4 text-sm text-yellow-800 flex items-start gap-2">
+          <span>🔒</span>
+          <div>Audit log bersifat <strong>append-only</strong>. Semua aksi CREATE, UPDATE, DELETE di sistem tercatat otomatis via database trigger. Untuk transparansi dan akuntabilitas.</div>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200 mb-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Dari Tanggal</label>
+            <input type="date" id="filterFrom" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Sampai Tanggal</label>
+            <input type="date" id="filterTo" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Entity</label>
+            <select id="filterEntity" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-hijau-500">
+              <option value="">Semua Entity</option>
+              <option value="nasabah">Nasabah</option>
+              <option value="jenis_sampah">Jenis Sampah</option>
+              <option value="setoran">Setoran</option>
+              <option value="transaksi">Transaksi</option>
+              <option value="penarikan">Penarikan</option>
+              <option value="bank_sampah">Bank Sampah</option>
+              <option value="sesi_setor">Sesi Setor</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Aksi</label>
+            <select id="filterAksi" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-hijau-500">
+              <option value="">Semua Aksi</option>
+              <option value="CREATE">CREATE</option>
+              <option value="UPDATE">UPDATE</option>
+              <option value="DELETE">DELETE</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+            <div class="text-sm text-gray-600">
+              Total: <span class="font-bold text-gray-800" id="totalCount">0</span> log
+              <span id="paginationInfo" class="text-gray-500 ml-2"></span>
+            </div>
+            <div class="flex gap-2">
+              <button id="btnPrev" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">← Sebelumnya</button>
+              <button id="btnNext" class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Berikutnya →</button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="text-left px-4 py-3 font-semibold text-gray-600">Waktu</th>
+                  <th class="text-left px-4 py-3 font-semibold text-gray-600">Pengguna</th>
+                  <th class="text-left px-4 py-3 font-semibold text-gray-600">Aksi</th>
+                  <th class="text-left px-4 py-3 font-semibold text-gray-600">Entity</th>
+                  <th class="text-left px-4 py-3 font-semibold text-gray-600">Alasan</th>
+                  <th class="text-center px-4 py-3 font-semibold text-gray-600">Detail</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody" class="divide-y divide-gray-100"></tbody>
+            </table>
+            <div id="emptyState" class="hidden p-8 text-center text-gray-500">
+              <div class="text-4xl mb-2">📜</div>
+              <p class="text-sm">Tidak ada log yang cocok dengan filter.</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div id="modalDetail" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white max-w-3xl w-full rounded-2xl max-h-[90vh] overflow-y-auto">
+      <div class="p-5 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
+        <div>
+          <h2 class="text-lg font-bold text-hijau-800" id="detailTitle">Detail Log</h2>
+          <p class="text-xs text-gray-500 mt-0.5" id="detailSubtitle">-</p>
+        </div>
+        <button id="btnCloseDetail" class="text-gray-500 hover:text-gray-700 p-1">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div class="bg-gray-50 rounded-lg p-3"><div class="text-xs text-gray-500 mb-1">Entity Type</div><div class="font-semibold" id="detailEntityType">-</div></div>
+          <div class="bg-gray-50 rounded-lg p-3"><div class="text-xs text-gray-500 mb-1">Entity ID</div><div class="font-mono text-xs break-all" id="detailEntityId">-</div></div>
+          <div class="bg-gray-50 rounded-lg p-3"><div class="text-xs text-gray-500 mb-1">Aksi</div><div class="font-semibold" id="detailAksi">-</div></div>
+          <div class="bg-gray-50 rounded-lg p-3"><div class="text-xs text-gray-500 mb-1">Alasan</div><div id="detailAlasan">-</div></div>
+        </div>
+
+        <div id="dataLamaSection">
+          <div class="text-sm font-semibold text-gray-700 mb-2">Data Sebelum:</div>
+          <pre class="bg-red-50 border border-red-200 rounded-lg p-3 text-xs overflow-x-auto max-h-64 overflow-y-auto" id="dataLamaJSON">-</pre>
+        </div>
+
+        <div id="dataBaruSection">
+          <div class="text-sm font-semibold text-gray-700 mb-2">Data Sesudah:</div>
+          <pre class="bg-hijau-50 border border-hijau-200 rounded-lg p-3 text-xs overflow-x-auto max-h-64 overflow-y-auto" id="dataBaruJSON">-</pre>
+        </div>
+
+        <div id="dataChangesSection" class="hidden">
+          <div class="text-sm font-semibold text-gray-700 mb-2">Perubahan:</div>
+          <div id="dataChanges" class="space-y-1"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '/shared/config.js';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+
+    const PAGE_SIZE = 50;
+    let currentPage = 0;
+    let totalCount = 0;
+    let currentLogs = [];
+    let petugasMap = {};
+
+    function renderSidebar() {
+      document.getElementById('sidebar-nav').innerHTML = `
+        <a href="/admin/dashboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>Dashboard</a>
+        <a href="/admin/rekap-per-rw.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Rekap per RW</a>
+        <a href="/admin/rekap-pkk.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Rekap PKK Bulanan</a>
+        <a href="/admin/rekap-tahunan.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>Rekap Tahunan</a>
+        <a href="/admin/pencairan-lebaran.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>Pencairan Lebaran</a>
+        <div class="pt-3 mt-3 border-t border-gray-200">
+          <div class="text-xs font-semibold text-gray-400 uppercase px-3 mb-2">Master Data</div>
+          <a href="/admin/master-bank-sampah.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>Bank Sampah</a>
+          <a href="/admin/master-nasabah.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>Nasabah</a>
+        </div>
+        <div class="pt-3 mt-3 border-t border-gray-200">
+          <a href="/admin/audit-log.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-hijau-100 text-hijau-800 font-semibold text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m-7 5h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>Audit Log</a>
+        </div>
+      `;
+    }
+
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return window.location.href = '/login.html';
+      const { data: petugas, error } = await supabase.from('petugas').select('*').eq('id', session.user.id).single();
+      if (error || !petugas || !['admin_desa', 'koordinator_pkk'].includes(petugas.role)) {
+        alert('Akses tidak valid.');
+        await supabase.auth.signOut();
+        return window.location.href = '/login.html';
+      }
+      document.getElementById('userName').textContent = petugas.nama;
+      document.getElementById('userRole').textContent = petugas.role === 'admin_desa' ? 'Admin Desa' : 'Koordinator PKK';
+      renderSidebar();
+
+      // Load petugas map (for user name resolution)
+      const { data: allPetugas } = await supabase.from('petugas').select('id, nama');
+      (allPetugas || []).forEach(p => { petugasMap[p.id] = p.nama; });
+
+      await loadLogs();
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+    }
+
+    async function loadLogs() {
+      const from = document.getElementById('filterFrom').value;
+      const to = document.getElementById('filterTo').value;
+      const entity = document.getElementById('filterEntity').value;
+      const aksi = document.getElementById('filterAksi').value;
+
+      let query = supabase.from('audit_log').select('*', { count: 'exact' });
+      if (from) query = query.gte('created_at', from + 'T00:00:00');
+      if (to) query = query.lte('created_at', to + 'T23:59:59');
+      if (entity) query = query.eq('entity_type', entity);
+      if (aksi) query = query.eq('aksi', aksi);
+      query = query.order('created_at', { ascending: false }).range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
+
+      const { data, error, count } = await query;
+      if (error) {
+        console.error('Error loading logs:', error);
+        return;
+      }
+      currentLogs = data || [];
+      totalCount = count || 0;
+
+      document.getElementById('totalCount').textContent = totalCount;
+      const startIdx = currentPage * PAGE_SIZE + 1;
+      const endIdx = Math.min((currentPage + 1) * PAGE_SIZE, totalCount);
+      document.getElementById('paginationInfo').textContent = totalCount > 0 ? `· Menampilkan ${startIdx}-${endIdx}` : '';
+      document.getElementById('btnPrev').disabled = currentPage === 0;
+      document.getElementById('btnNext').disabled = (currentPage + 1) * PAGE_SIZE >= totalCount;
+
+      render();
+    }
+
+    function render() {
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+      const emptyState = document.getElementById('emptyState');
+      if (currentLogs.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+
+      currentLogs.forEach(log => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50';
+        const time = new Date(log.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const userName = petugasMap[log.dibuat_oleh] || '<span class="text-gray-400 italic">System</span>';
+        const aksiBadge = getAksiBadge(log.aksi);
+        const entityLabel = getEntityLabel(log.entity_type);
+        const alasan = log.alasan ? escapeHtml(log.alasan) : '<span class="text-gray-400 italic">-</span>';
+
+        tr.innerHTML = `
+          <td class="px-4 py-3 text-gray-700 text-xs whitespace-nowrap">${time}</td>
+          <td class="px-4 py-3 text-gray-800 font-medium">${userName}</td>
+          <td class="px-4 py-3">${aksiBadge}</td>
+          <td class="px-4 py-3 text-gray-700">${entityLabel}</td>
+          <td class="px-4 py-3 text-gray-600 text-xs max-w-xs truncate">${alasan}</td>
+          <td class="px-4 py-3 text-center">
+            <button data-id="${log.id}" class="btn-detail text-hijau-700 hover:text-hijau-800 font-semibold text-xs">Lihat →</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.querySelectorAll('.btn-detail').forEach(b => b.addEventListener('click', () => showDetail(b.dataset.id)));
+    }
+
+    function getAksiBadge(aksi) {
+      const styles = {
+        'CREATE': 'bg-hijau-100 text-hijau-700',
+        'UPDATE': 'bg-blue-100 text-blue-700',
+        'DELETE': 'bg-red-100 text-red-700',
+      };
+      return `<span class="text-xs px-2 py-0.5 rounded font-semibold ${styles[aksi] || 'bg-gray-100 text-gray-700'}">${aksi}</span>`;
+    }
+
+    function getEntityLabel(entity) {
+      const labels = {
+        'nasabah': 'Nasabah',
+        'jenis_sampah': 'Jenis Sampah',
+        'setoran': 'Setoran',
+        'transaksi': 'Transaksi',
+        'penarikan': 'Penarikan',
+        'bank_sampah': 'Bank Sampah',
+        'sesi_setor': 'Sesi Setor',
+      };
+      return labels[entity] || entity;
+    }
+
+    function showDetail(id) {
+      const log = currentLogs.find(l => l.id === id);
+      if (!log) return;
+      const time = new Date(log.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const userName = petugasMap[log.dibuat_oleh] || 'System';
+      document.getElementById('detailTitle').textContent = `${log.aksi} · ${getEntityLabel(log.entity_type)}`;
+      document.getElementById('detailSubtitle').textContent = `${time} · oleh ${userName}`;
+      document.getElementById('detailEntityType').textContent = getEntityLabel(log.entity_type);
+      document.getElementById('detailEntityId').textContent = log.entity_id;
+      document.getElementById('detailAksi').innerHTML = getAksiBadge(log.aksi);
+      document.getElementById('detailAlasan').textContent = log.alasan || '-';
+
+      // Show data_lama and data_baru
+      const dataLamaSec = document.getElementById('dataLamaSection');
+      const dataBaruSec = document.getElementById('dataBaruSection');
+      if (log.data_lama) {
+        dataLamaSec.classList.remove('hidden');
+        document.getElementById('dataLamaJSON').textContent = JSON.stringify(log.data_lama, null, 2);
+      } else {
+        dataLamaSec.classList.add('hidden');
+      }
+      if (log.data_baru) {
+        dataBaruSec.classList.remove('hidden');
+        document.getElementById('dataBaruJSON').textContent = JSON.stringify(log.data_baru, null, 2);
+      } else {
+        dataBaruSec.classList.add('hidden');
+      }
+
+      // Compute diff (for UPDATE only)
+      const changesSec = document.getElementById('dataChangesSection');
+      const changesEl = document.getElementById('dataChanges');
+      if (log.aksi === 'UPDATE' && log.data_lama && log.data_baru) {
+        const changes = [];
+        Object.keys(log.data_baru).forEach(key => {
+          const oldVal = log.data_lama[key];
+          const newVal = log.data_baru[key];
+          if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+            changes.push({ key, old: oldVal, new: newVal });
+          }
+        });
+        if (changes.length > 0) {
+          changesEl.innerHTML = changes.map(c => `
+            <div class="border border-gray-200 rounded-lg p-2 text-xs">
+              <div class="font-semibold text-gray-800 mb-1">${escapeHtml(c.key)}</div>
+              <div class="grid grid-cols-2 gap-2">
+                <div class="bg-red-50 border border-red-200 rounded p-1.5"><span class="text-red-700">${escapeHtml(String(c.old ?? '(null)'))}</span></div>
+                <div class="bg-hijau-50 border border-hijau-200 rounded p-1.5"><span class="text-hijau-700">${escapeHtml(String(c.new ?? '(null)'))}</span></div>
+              </div>
+            </div>
+          `).join('');
+          changesSec.classList.remove('hidden');
+        } else {
+          changesSec.classList.add('hidden');
+        }
+      } else {
+        changesSec.classList.add('hidden');
+      }
+
+      document.getElementById('modalDetail').classList.remove('hidden');
+    }
+
+    document.getElementById('btnCloseDetail').addEventListener('click', () => document.getElementById('modalDetail').classList.add('hidden'));
+    document.getElementById('btnPrev').addEventListener('click', async () => { if (currentPage > 0) { currentPage--; await loadLogs(); } });
+    document.getElementById('btnNext').addEventListener('click', async () => { if ((currentPage + 1) * PAGE_SIZE < totalCount) { currentPage++; await loadLogs(); } });
+    document.getElementById('filterFrom').addEventListener('change', async () => { currentPage = 0; await loadLogs(); });
+    document.getElementById('filterTo').addEventListener('change', async () => { currentPage = 0; await loadLogs(); });
+    document.getElementById('filterEntity').addEventListener('change', async () => { currentPage = 0; await loadLogs(); });
+    document.getElementById('filterAksi').addEventListener('change', async () => { currentPage = 0; await loadLogs(); });
+    document.getElementById('logoutBtn').addEventListener('click', async () => { await supabase.auth.signOut(); window.location.href = '/login.html'; });
+    function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text ?? ''; return div.innerHTML; }
+    init();
+  </script>
+</body>
+</html>

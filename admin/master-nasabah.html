@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Master Nasabah · Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { 'sans': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'] }, colors: { 'hijau': { 50: '#F1F8F3', 100: '#DFF0E4', 200: '#B7DDC1', 300: '#8AC59A', 400: '#5FA773', 500: '#3A7D44', 600: '#2D5F3F', 700: '#254D33', 800: '#1E3F2A', 900: '#183321' } } } } }
+  </script>
+</head>
+<body class="font-sans bg-gray-50 min-h-screen">
+
+  <div id="loadingState" class="min-h-screen flex items-center justify-center">
+    <div class="text-center">
+      <div class="w-12 h-12 border-4 border-hijau-200 border-t-hijau-500 rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-hijau-700 font-medium">Memuat data nasabah...</p>
+    </div>
+  </div>
+
+  <div id="mainContent" class="hidden">
+    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+      <div class="px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-hijau-500 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">BS</span></div>
+          <div><div class="font-bold text-hijau-800 text-sm leading-tight">Bank Sampah Sunggingan</div><div class="text-gray-500 text-xs">Master Nasabah</div></div>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="text-right"><div class="font-semibold text-gray-800 text-sm" id="userName">-</div><div class="text-xs text-gray-500" id="userRole">-</div></div>
+          <button id="logoutBtn" class="flex items-center gap-1 text-hijau-700 hover:text-hijau-800 hover:bg-hijau-50 px-3 py-2 rounded-lg text-sm font-semibold">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Keluar
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="flex">
+      <aside class="w-60 bg-white border-r border-gray-200 min-h-[calc(100vh-64px)] sticky top-16">
+        <nav class="p-3 space-y-1" id="sidebar-nav"></nav>
+      </aside>
+
+      <main class="flex-1 p-6">
+        <div class="mb-6">
+          <h1 class="text-2xl font-bold text-gray-800">Master Nasabah</h1>
+          <p class="text-sm text-gray-500 mt-0.5">Semua nasabah 6 bank sampah Kelurahan Sunggingan</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+          <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+            <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Total Nasabah</div>
+            <div class="text-2xl font-bold text-hijau-700" id="statTotal">0</div>
+          </div>
+          <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+            <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Bank Sampah</div>
+            <div class="text-2xl font-bold text-hijau-700" id="statBS">6</div>
+          </div>
+          <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+            <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Total Saldo</div>
+            <div class="text-2xl font-bold text-hijau-700" id="statSaldo">Rp 0</div>
+          </div>
+          <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+            <div class="text-xs font-semibold text-gray-500 uppercase mb-1">Data Terpilih</div>
+            <div class="text-2xl font-bold text-hijau-700" id="statFiltered">0</div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200 mb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Cari Nama</label>
+            <input type="text" id="searchInput" placeholder="Ketik nama nasabah..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Bank Sampah</label>
+            <select id="filterBS" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-hijau-500"><option value="">Semua Bank Sampah</option></select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">RT</label>
+            <select id="filterRT" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-hijau-500"><option value="">Semua RT</option></select>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="text-left px-4 py-3 font-semibold text-gray-600 w-12">No</th>
+                  <th class="text-left px-4 py-3 font-semibold text-gray-600">Nama</th>
+                  <th class="text-left px-4 py-3 font-semibold text-gray-600">Bank Sampah</th>
+                  <th class="text-center px-4 py-3 font-semibold text-gray-600">RT</th>
+                  <th class="text-left px-4 py-3 font-semibold text-gray-600">Dawis</th>
+                  <th class="text-left px-4 py-3 font-semibold text-gray-600">No HP</th>
+                  <th class="text-right px-4 py-3 font-semibold text-gray-600">Saldo</th>
+                  <th class="text-center px-4 py-3 font-semibold text-gray-600">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody" class="divide-y divide-gray-100"></tbody>
+            </table>
+            <div id="emptyState" class="hidden p-8 text-center text-gray-500">
+              <div class="text-4xl mb-2">👥</div>
+              <p class="text-sm">Tidak ada nasabah yang cocok dengan filter.</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div id="modalEdit" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white max-w-md w-full rounded-2xl max-h-[90vh] overflow-y-auto">
+      <div class="p-5 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-lg font-bold text-hijau-800">Edit Nasabah</h2>
+        <button id="btnCloseEdit" class="text-gray-500 hover:text-gray-700 p-1">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="editForm" class="p-5 space-y-3">
+        <input type="hidden" id="fId">
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Bank Sampah</label>
+          <input type="text" id="fBankSampah" readonly class="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-600">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Nama <span class="text-red-500">*</span></label>
+          <input type="text" id="fNama" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">RT <span class="text-red-500">*</span></label>
+            <input type="text" id="fRT" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Dawis</label>
+            <input type="text" id="fDawis" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">No HP</label>
+          <input type="tel" id="fNoHP" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Alamat</label>
+          <textarea id="fAlamat" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Catatan</label>
+          <textarea id="fCatatan" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500"></textarea>
+        </div>
+        <div id="formError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm"></div>
+        <div class="flex gap-2 pt-2">
+          <button type="button" id="btnCancelEdit" class="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50">Batal</button>
+          <button type="submit" id="btnSave" class="flex-1 py-2.5 bg-hijau-500 hover:bg-hijau-600 text-white rounded-lg font-semibold text-sm disabled:opacity-50">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="modalDelete" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white max-w-md w-full rounded-2xl p-5">
+      <h2 class="text-lg font-bold text-red-700 mb-2">Hapus Nasabah</h2>
+      <p class="text-gray-600 text-sm mb-3">Yakin hapus <span class="font-bold" id="deleteName">-</span>? Data setoran lama tetap tersimpan untuk laporan.</p>
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-gray-700 mb-1">Alasan <span class="text-red-500">*</span></label>
+        <textarea id="deleteReason" rows="2" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
+      </div>
+      <div id="deleteError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm mb-3"></div>
+      <div class="flex gap-2">
+        <button id="btnCancelDelete" class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm">Batal</button>
+        <button id="btnConfirmDelete" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold text-sm">Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '/shared/config.js';
+    import { formatRp, showToast } from '/shared/utils.js';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+
+    let allNasabah = [];
+    let allBS = [];
+    let saldoMap = {};
+    let currentDeleteId = null;
+    let currentPetugasId = null;
+
+    function renderSidebar() {
+      document.getElementById('sidebar-nav').innerHTML = `
+        <a href="/admin/dashboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>Dashboard</a>
+        <a href="/admin/rekap-per-rw.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>Rekap per RW</a>
+        <a href="/admin/rekap-pkk.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Rekap PKK Bulanan</a>
+        <a href="/admin/rekap-tahunan.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>Rekap Tahunan</a>
+        <a href="/admin/pencairan-lebaran.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>Pencairan Lebaran</a>
+        <div class="pt-3 mt-3 border-t border-gray-200">
+          <div class="text-xs font-semibold text-gray-400 uppercase px-3 mb-2">Master Data</div>
+          <a href="/admin/master-bank-sampah.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>Bank Sampah</a>
+          <a href="/admin/master-nasabah.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-hijau-100 text-hijau-800 font-semibold text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>Nasabah</a>
+        </div>
+        <div class="pt-3 mt-3 border-t border-gray-200">
+          <a href="/admin/audit-log.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m-7 5h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>Audit Log</a>
+        </div>
+      `;
+    }
+
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return window.location.href = '/login.html';
+      const { data: petugas, error } = await supabase.from('petugas').select('*').eq('id', session.user.id).single();
+      if (error || !petugas || !['admin_desa', 'koordinator_pkk'].includes(petugas.role)) {
+        alert('Akses tidak valid.');
+        await supabase.auth.signOut();
+        return window.location.href = '/login.html';
+      }
+      currentPetugasId = petugas.id;
+      document.getElementById('userName').textContent = petugas.nama;
+      document.getElementById('userRole').textContent = petugas.role === 'admin_desa' ? 'Admin Desa' : 'Koordinator PKK';
+      renderSidebar();
+      await loadData();
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+    }
+
+    async function loadData() {
+      const { data: bsData } = await supabase.from('bank_sampah').select('id, nama, rw').is('deleted_at', null).order('rw');
+      allBS = bsData || [];
+      const bsMap = {}; allBS.forEach(b => { bsMap[b.id] = b; });
+
+      const { data: nasabahData } = await supabase.from('nasabah').select('*').is('deleted_at', null).order('nama');
+      allNasabah = (nasabahData || []).map(n => ({ ...n, bs: bsMap[n.bank_sampah_id] }));
+
+      const { data: saldoData } = await supabase.from('view_saldo_nasabah').select('*');
+      saldoMap = {};
+      (saldoData || []).forEach(s => { saldoMap[s.nasabah_id] = s; });
+
+      // Populate filters
+      const bsSelect = document.getElementById('filterBS');
+      const currentVal = bsSelect.value;
+      bsSelect.innerHTML = '<option value="">Semua Bank Sampah</option>';
+      allBS.forEach(b => {
+        const opt = document.createElement('option'); opt.value = b.id; opt.textContent = `RW ${b.rw} · ${b.nama}`;
+        bsSelect.appendChild(opt);
+      });
+      bsSelect.value = currentVal;
+
+      const rtSet = new Set();
+      allNasabah.forEach(n => { if (n.rt) rtSet.add(n.rt); });
+      const rtSelect = document.getElementById('filterRT');
+      const rtVal = rtSelect.value;
+      rtSelect.innerHTML = '<option value="">Semua RT</option>';
+      Array.from(rtSet).sort().forEach(rt => {
+        const opt = document.createElement('option'); opt.value = rt; opt.textContent = 'RT ' + rt;
+        rtSelect.appendChild(opt);
+      });
+      rtSelect.value = rtVal;
+
+      // Stats
+      const realNasabah = allNasabah.filter(n => !n.is_default);
+      const totalSaldo = realNasabah.reduce((sum, n) => sum + Number(saldoMap[n.id]?.saldo || 0), 0);
+      document.getElementById('statTotal').textContent = realNasabah.length;
+      document.getElementById('statSaldo').textContent = formatRp(totalSaldo);
+
+      render();
+    }
+
+    function render() {
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      const bsFilter = document.getElementById('filterBS').value;
+      const rtFilter = document.getElementById('filterRT').value;
+
+      const filtered = allNasabah.filter(n => {
+        if (n.is_default) return false;
+        if (q && !n.nama.toLowerCase().includes(q)) return false;
+        if (bsFilter && n.bank_sampah_id !== bsFilter) return false;
+        if (rtFilter && n.rt !== rtFilter) return false;
+        return true;
+      });
+
+      document.getElementById('statFiltered').textContent = filtered.length;
+
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+      const emptyState = document.getElementById('emptyState');
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+      filtered.forEach((n, idx) => {
+        const saldo = Number(saldoMap[n.id]?.saldo || 0);
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50';
+        tr.innerHTML = `
+          <td class="px-4 py-3 text-gray-500">${idx + 1}</td>
+          <td class="px-4 py-3 font-semibold text-gray-800">${escapeHtml(n.nama)}</td>
+          <td class="px-4 py-3 text-gray-700">RW ${n.bs?.rw || '-'} · ${escapeHtml(n.bs?.nama || '-')}</td>
+          <td class="px-4 py-3 text-center text-gray-700">${escapeHtml(n.rt || '-')}</td>
+          <td class="px-4 py-3 text-gray-700">${escapeHtml(n.dawis || '-')}</td>
+          <td class="px-4 py-3 text-gray-700">${escapeHtml(n.no_hp || '-')}</td>
+          <td class="px-4 py-3 text-right font-semibold ${saldo > 0 ? 'text-hijau-700' : 'text-gray-400'}">${formatRp(saldo)}</td>
+          <td class="px-4 py-3 text-center">
+            <button data-id="${n.id}" class="btn-edit p-1.5 text-gray-600 hover:text-hijau-700 hover:bg-hijau-50 rounded"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+            <button data-id="${n.id}" data-nama="${escapeHtml(n.nama)}" class="btn-delete p-1.5 text-gray-600 hover:text-red-700 hover:bg-red-50 rounded"><svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/></svg></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', () => openEdit(b.dataset.id)));
+      document.querySelectorAll('.btn-delete').forEach(b => b.addEventListener('click', () => openDelete(b.dataset.id, b.dataset.nama)));
+    }
+
+    function openEdit(id) {
+      const n = allNasabah.find(x => x.id === id);
+      if (!n) return;
+      document.getElementById('fId').value = n.id;
+      document.getElementById('fBankSampah').value = `RW ${n.bs?.rw || '-'} · ${n.bs?.nama || '-'}`;
+      document.getElementById('fNama').value = n.nama || '';
+      document.getElementById('fRT').value = n.rt || '';
+      document.getElementById('fDawis').value = n.dawis || '';
+      document.getElementById('fNoHP').value = n.no_hp || '';
+      document.getElementById('fAlamat').value = n.alamat || '';
+      document.getElementById('fCatatan').value = n.catatan || '';
+      document.getElementById('formError').classList.add('hidden');
+      document.getElementById('modalEdit').classList.remove('hidden');
+    }
+
+    document.getElementById('btnCloseEdit').addEventListener('click', () => document.getElementById('modalEdit').classList.add('hidden'));
+    document.getElementById('btnCancelEdit').addEventListener('click', () => document.getElementById('modalEdit').classList.add('hidden'));
+
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('fId').value;
+      const payload = {
+        nama: document.getElementById('fNama').value.trim(),
+        rt: document.getElementById('fRT').value.trim(),
+        dawis: document.getElementById('fDawis').value.trim() || null,
+        no_hp: document.getElementById('fNoHP').value.trim() || null,
+        alamat: document.getElementById('fAlamat').value.trim() || null,
+        catatan: document.getElementById('fCatatan').value.trim() || null,
+      };
+      if (!payload.nama || !payload.rt) {
+        const errEl = document.getElementById('formError');
+        errEl.textContent = 'Nama dan RT wajib diisi.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      const btn = document.getElementById('btnSave');
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
+      const { error } = await supabase.from('nasabah').update(payload).eq('id', id);
+      if (error) {
+        const errEl = document.getElementById('formError');
+        errEl.textContent = 'Gagal: ' + error.message;
+        errEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Simpan';
+        return;
+      }
+      showToast('Nasabah diperbarui', 'success');
+      document.getElementById('modalEdit').classList.add('hidden');
+      await loadData();
+      btn.disabled = false;
+      btn.textContent = 'Simpan';
+    });
+
+    function openDelete(id, nama) {
+      currentDeleteId = id;
+      document.getElementById('deleteName').textContent = nama;
+      document.getElementById('deleteReason').value = '';
+      document.getElementById('deleteError').classList.add('hidden');
+      document.getElementById('modalDelete').classList.remove('hidden');
+    }
+
+    document.getElementById('btnCancelDelete').addEventListener('click', () => document.getElementById('modalDelete').classList.add('hidden'));
+
+    document.getElementById('btnConfirmDelete').addEventListener('click', async () => {
+      const reason = document.getElementById('deleteReason').value.trim();
+      const errEl = document.getElementById('deleteError');
+      if (!reason) { errEl.textContent = 'Alasan wajib diisi.'; errEl.classList.remove('hidden'); return; }
+      const btn = document.getElementById('btnConfirmDelete');
+      btn.disabled = true; btn.textContent = 'Menghapus...';
+      const { error } = await supabase.from('nasabah').update({
+        deleted_at: new Date().toISOString(), deleted_by: currentPetugasId, delete_reason: reason,
+      }).eq('id', currentDeleteId);
+      if (error) { errEl.textContent = 'Gagal: ' + error.message; errEl.classList.remove('hidden'); btn.disabled = false; btn.textContent = 'Hapus'; return; }
+      showToast('Nasabah dihapus', 'success');
+      document.getElementById('modalDelete').classList.add('hidden');
+      await loadData();
+      btn.disabled = false; btn.textContent = 'Hapus';
+    });
+
+    document.getElementById('searchInput').addEventListener('input', render);
+    document.getElementById('filterBS').addEventListener('change', render);
+    document.getElementById('filterRT').addEventListener('change', render);
+    document.getElementById('logoutBtn').addEventListener('click', async () => { await supabase.auth.signOut(); window.location.href = '/login.html'; });
+    function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text ?? ''; return div.innerHTML; }
+    init();
+  </script>
+</body>
+</html>
