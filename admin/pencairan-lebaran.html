@@ -199,15 +199,15 @@
     }
 
     async function loadHistory() {
-      const { data: penarikan } = await supabase.from('penarikan').select('id, tanggal, jumlah_ditarik, keterangan, bank_sampah_id, nasabah_id, bank_sampah(nama, rw)').is('deleted_at', null).ilike('keterangan', 'Pencairan Lebaran%').order('tanggal', { ascending: false });
+      const { data: penarikan } = await supabase.from('penarikan').select('id, tanggal, jumlah_rp, catatan, bank_sampah_id, nasabah_id, bank_sampah(nama, rw)').is('deleted_at', null).ilike('catatan', 'Pencairan Lebaran%').order('tanggal', { ascending: false });
 
       const grouped = {};
       (penarikan || []).forEach(p => {
-        const key = p.keterangan + '||' + p.tanggal;
-        if (!grouped[key]) grouped[key] = { keterangan: p.keterangan, tanggal: p.tanggal, bs: new Set(), nasabah: new Set(), total: 0 };
+        const key = p.catatan + '||' + p.tanggal;
+        if (!grouped[key]) grouped[key] = { catatan: p.catatan, tanggal: p.tanggal, bs: new Set(), nasabah: new Set(), total: 0 };
         grouped[key].bs.add(p.bank_sampah?.nama || '-');
         grouped[key].nasabah.add(p.nasabah_id);
-        grouped[key].total += Number(p.jumlah_ditarik || 0);
+        grouped[key].total += Number(p.jumlah_rp || 0);
       });
 
       const tbody = document.getElementById('historyBody');
@@ -224,7 +224,7 @@
         tr.className = 'hover:bg-gray-50';
         tr.innerHTML = `
           <td class="px-5 py-3 text-gray-700">${formatTanggal(r.tanggal)}</td>
-          <td class="px-5 py-3 font-semibold text-gray-800">${r.keterangan}</td>
+          <td class="px-5 py-3 font-semibold text-gray-800">${r.catatan}</td>
           <td class="px-5 py-3 text-right text-gray-700">${r.bs.size} bank sampah</td>
           <td class="px-5 py-3 text-right text-gray-700">${r.nasabah.size}</td>
           <td class="px-5 py-3 text-right font-bold text-hijau-700">${formatRp(r.total)}</td>
@@ -250,7 +250,7 @@
       const { data: bsData } = await supabase.from('bank_sampah').select('*').is('deleted_at', null).eq('aktif', true).order('rw');
       const { data: nasabahAll } = await supabase.from('nasabah').select('*').is('deleted_at', null);
       const { data: setoranAll } = await supabase.from('setoran').select('nasabah_id, bank_sampah_id, total_rp').is('deleted_at', null);
-      const { data: penarikanAll } = await supabase.from('penarikan').select('nasabah_id, bank_sampah_id, jumlah_ditarik').is('deleted_at', null);
+      const { data: penarikanAll } = await supabase.from('penarikan').select('nasabah_id, bank_sampah_id, jumlah_rp').is('deleted_at', null);
 
       const perBS = {};
       (bsData || []).forEach(bs => { perBS[bs.id] = { ...bs, nasabahMap: {} }; });
@@ -266,7 +266,7 @@
       });
       (penarikanAll || []).forEach(p => {
         if (perBS[p.bank_sampah_id]?.nasabahMap[p.nasabah_id]) {
-          perBS[p.bank_sampah_id].nasabahMap[p.nasabah_id].totalPenarikan += Number(p.jumlah_ditarik || 0);
+          perBS[p.bank_sampah_id].nasabahMap[p.nasabah_id].totalPenarikan += Number(p.jumlah_rp || 0);
         }
       });
 
@@ -408,9 +408,9 @@
             rows.push({
               nasabah_id: n.id,
               bank_sampah_id: bs.id,
-              jumlah_ditarik: n.saldo,
+              jumlah_rp: n.saldo,
               tanggal: draftData.tanggal,
-              keterangan: draftData.nama,
+              catatan: draftData.nama,
               dibuat_oleh: currentPetugas.id,
             });
           }

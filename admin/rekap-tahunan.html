@@ -57,10 +57,10 @@
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             Rekap Tahunan
           </a>
-          <a href="/admin/pencairan-lebaran.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm">
+          <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 text-sm cursor-not-allowed">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-            Pencairan Lebaran
-          </a>
+            Pencairan Lebaran <span class="ml-auto text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">soon</span>
+          </div>
         </nav>
       </aside>
 
@@ -216,7 +216,7 @@
       const { data: nasabah } = await supabase.from('nasabah').select('id, bank_sampah_id, nama, rt, dawis, is_default').is('deleted_at', null);
       const { data: setoran } = await supabase.from('setoran').select('nasabah_id, bank_sampah_id, total_rp, tanggal').is('deleted_at', null).gte('tanggal', startDate).lte('tanggal', endDate);
       const { data: transaksi } = await supabase.from('transaksi').select('bank_sampah_id, jumlah, satuan, nasabah_id, setoran_id').is('deleted_at', null).gte('created_at', startDate + 'T00:00:00').lte('created_at', endDate + 'T23:59:59');
-      const { data: penarikan } = await supabase.from('penarikan').select('nasabah_id, bank_sampah_id, jumlah_ditarik, tanggal').is('deleted_at', null).gte('tanggal', startDate).lte('tanggal', endDate);
+      const { data: penarikan } = await supabase.from('penarikan').select('nasabah_id, bank_sampah_id, jumlah_rp, tanggal').is('deleted_at', null).gte('tanggal', startDate).lte('tanggal', endDate);
 
       const perBS = {};
       allBS.forEach(bs => {
@@ -241,9 +241,9 @@
       });
       (penarikan || []).forEach(p => {
         if (!perBS[p.bank_sampah_id]) return;
-        perBS[p.bank_sampah_id].totalPenarikan += Number(p.jumlah_ditarik || 0);
+        perBS[p.bank_sampah_id].totalPenarikan += Number(p.jumlah_rp || 0);
         if (perBS[p.bank_sampah_id].nasabahMap[p.nasabah_id]) {
-          perBS[p.bank_sampah_id].nasabahMap[p.nasabah_id].totalPenarikan += Number(p.jumlah_ditarik || 0);
+          perBS[p.bank_sampah_id].nasabahMap[p.nasabah_id].totalPenarikan += Number(p.jumlah_rp || 0);
         }
       });
 

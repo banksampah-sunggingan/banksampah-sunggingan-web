@@ -224,7 +224,7 @@
       const { data: nasabah } = await supabase.from('nasabah').select('*').eq('bank_sampah_id', bankSampahId).is('deleted_at', null).order('nama');
       const { data: setoran } = await supabase.from('setoran').select('nasabah_id, total_rp, tanggal, id').eq('bank_sampah_id', bankSampahId).is('deleted_at', null).gte('tanggal', startDate).lte('tanggal', endDate);
       const { data: transaksi } = await supabase.from('transaksi').select('setoran_id, jumlah, satuan, harga_saat_transaksi, total_rp, jenis_sampah_id, jenis_sampah(nama)').eq('bank_sampah_id', bankSampahId).is('deleted_at', null).gte('created_at', startDate + 'T00:00:00').lte('created_at', endDate + 'T23:59:59');
-      const { data: penarikan } = await supabase.from('penarikan').select('nasabah_id, jumlah_ditarik, tanggal').eq('bank_sampah_id', bankSampahId).is('deleted_at', null).gte('tanggal', startDate).lte('tanggal', endDate);
+      const { data: penarikan } = await supabase.from('penarikan').select('nasabah_id, jumlah_rp, tanggal').eq('bank_sampah_id', bankSampahId).is('deleted_at', null).gte('tanggal', startDate).lte('tanggal', endDate);
 
       const perNasabah = {};
       (nasabah || []).forEach(n => {
@@ -247,7 +247,7 @@
       });
       (penarikan || []).forEach(p => {
         if (!perNasabah[p.nasabah_id]) return;
-        perNasabah[p.nasabah_id].totalPenarikan += Number(p.jumlah_ditarik || 0);
+        perNasabah[p.nasabah_id].totalPenarikan += Number(p.jumlah_rp || 0);
       });
 
       allNasabahData = Object.values(perNasabah).map(n => ({ ...n, saldo: n.totalSetoran - n.totalPenarikan }));
