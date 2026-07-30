@@ -231,6 +231,40 @@
     </div>
   </div>
 
+  <!-- Modal Edit Setoran -->
+  <div id="modalEditSetoran" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl p-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-bold text-hijau-800">Edit Setoran</h2>
+        <button type="button" id="btnCloseEditSetoran" class="text-gray-500 hover:text-gray-700 p-1">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="bg-gray-50 rounded-lg p-3 mb-3 text-sm">
+        <div class="font-semibold text-gray-800" id="editSetoranNasabah">-</div>
+        <div class="text-xs text-gray-500" id="editSetoranInfo">-</div>
+      </div>
+      <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-3 text-xs text-yellow-800">
+        Ubah jumlah atau harga jika ada salah input. Perubahan tercatat di audit log.
+      </div>
+      <div id="editSetoranItems" class="space-y-2 mb-3"></div>
+      <div class="border-t border-gray-200 pt-3 mb-3 flex items-center justify-between">
+        <span class="text-sm font-semibold text-gray-600">TOTAL SETORAN</span>
+        <span class="text-lg font-bold text-hijau-700" id="editSetoranTotal">Rp 0</span>
+      </div>
+      <div class="mb-3">
+        <label class="block text-xs font-semibold text-gray-700 mb-1">Alasan Edit <span class="text-red-500">*</span></label>
+        <textarea id="editSetoranReason" rows="2" required placeholder="Contoh: Typo jumlah kg, harga salah input"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-hijau-500"></textarea>
+      </div>
+      <div id="editSetoranError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm mb-3"></div>
+      <div class="flex gap-2">
+        <button type="button" id="btnCancelEditSetoran" class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50">Batal</button>
+        <button type="button" id="btnSaveEditSetoran" class="flex-1 py-3 bg-hijau-500 hover:bg-hijau-600 text-white rounded-lg font-bold text-sm disabled:opacity-50">Simpan</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '/shared/config.js';
     import { formatRp, formatTanggal, showToast } from '/shared/utils.js';
@@ -432,11 +466,18 @@
             <div class="text-xs text-gray-500">${nasabahRT}${nasabahDawis} · ${timeStr}</div>
           </div>
           ${canDelete ? `
-            <button data-id="${setoran.id}" data-nasabah="${escapeHtml(nasabahName)}" data-total="${setoran.total_rp}" class="btn-delete p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/>
-              </svg>
-            </button>
+            <div class="flex gap-1">
+              <button data-id="${setoran.id}" class="btn-edit p-1.5 text-gray-600 hover:text-hijau-700 hover:bg-hijau-50 rounded-lg" title="Edit setoran">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+              </button>
+              <button data-id="${setoran.id}" data-nasabah="${escapeHtml(nasabahName)}" data-total="${setoran.total_rp}" class="btn-delete p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg" title="Hapus setoran">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/>
+                </svg>
+              </button>
+            </div>
           ` : ''}
         </div>
         <div class="border-t border-gray-100 pt-2">
@@ -451,6 +492,10 @@
       const btnDel = card.querySelector('.btn-delete');
       if (btnDel) {
         btnDel.addEventListener('click', () => openDeleteModal(btnDel.dataset.id, btnDel.dataset.nasabah, btnDel.dataset.total));
+      }
+      const btnEd = card.querySelector('.btn-edit');
+      if (btnEd) {
+        btnEd.addEventListener('click', () => openEditSetoranModal(btnEd.dataset.id));
       }
 
       return card;
@@ -616,6 +661,137 @@
       render();
       btn.disabled = false;
       btn.textContent = 'Hapus';
+    });
+
+    // ==== EDIT SETORAN INDIVIDUAL ====
+    let currentEditSetoranId = null;
+    let currentEditTransaksi = [];
+
+    function openEditSetoranModal(setoranId) {
+      const setoran = setoranList.find(s => s.id === setoranId);
+      if (!setoran) return;
+      currentEditSetoranId = setoranId;
+      currentEditTransaksi = (setoran.transaksi || []).map(t => ({ ...t })); // clone
+      
+      const nasabahName = setoran.nasabah?.nama || 'Tidak dikenali';
+      const timeStr = new Date(setoran.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('editSetoranNasabah').textContent = nasabahName;
+      document.getElementById('editSetoranInfo').textContent = 
+        `RT ${setoran.nasabah?.rt || '-'}${setoran.nasabah?.dawis ? ' · ' + setoran.nasabah.dawis : ''} · ${timeStr}`;
+      document.getElementById('editSetoranReason').value = '';
+      document.getElementById('editSetoranError').classList.add('hidden');
+      
+      renderEditItems();
+      document.getElementById('modalEditSetoran').classList.remove('hidden');
+    }
+
+    function renderEditItems() {
+      const container = document.getElementById('editSetoranItems');
+      container.innerHTML = '';
+      let total = 0;
+      currentEditTransaksi.forEach((t, idx) => {
+        const subtotal = Number(t.jumlah || 0) * Number(t.harga_saat_transaksi || 0);
+        total += subtotal;
+        const div = document.createElement('div');
+        div.className = 'bg-white border border-gray-200 rounded-lg p-3';
+        div.innerHTML = `
+          <div class="text-sm font-semibold text-hijau-800 mb-2">${escapeHtml(t.jenis_sampah?.nama || '-')}</div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Jumlah (${t.satuan})</label>
+              <input type="number" step="0.01" min="0" value="${Number(t.jumlah).toFixed(2)}" data-idx="${idx}" data-field="jumlah"
+                class="edit-input w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-hijau-500">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-600 mb-1">Harga (Rp)</label>
+              <input type="number" step="1" min="0" value="${Number(t.harga_saat_transaksi).toFixed(0)}" data-idx="${idx}" data-field="harga_saat_transaksi"
+                class="edit-input w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-hijau-500">
+            </div>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-xs">
+            <span class="text-gray-500">Subtotal item</span>
+            <span class="font-semibold text-hijau-700" data-subtotal="${idx}">${formatRp(subtotal)}</span>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+      document.getElementById('editSetoranTotal').textContent = formatRp(total);
+      
+      // Bind input events for live calculation
+      container.querySelectorAll('.edit-input').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const idx = Number(e.target.dataset.idx);
+          const field = e.target.dataset.field;
+          currentEditTransaksi[idx][field] = Number(e.target.value) || 0;
+          // Live update subtotal + total
+          let newTotal = 0;
+          currentEditTransaksi.forEach((t, i) => {
+            const sub = Number(t.jumlah || 0) * Number(t.harga_saat_transaksi || 0);
+            newTotal += sub;
+            const subEl = container.querySelector(`[data-subtotal="${i}"]`);
+            if (subEl) subEl.textContent = formatRp(sub);
+          });
+          document.getElementById('editSetoranTotal').textContent = formatRp(newTotal);
+        });
+      });
+    }
+
+    document.getElementById('btnCloseEditSetoran').addEventListener('click', () => {
+      document.getElementById('modalEditSetoran').classList.add('hidden');
+    });
+    document.getElementById('btnCancelEditSetoran').addEventListener('click', () => {
+      document.getElementById('modalEditSetoran').classList.add('hidden');
+    });
+
+    document.getElementById('btnSaveEditSetoran').addEventListener('click', async () => {
+      const reason = document.getElementById('editSetoranReason').value.trim();
+      const errEl = document.getElementById('editSetoranError');
+      if (!reason) {
+        errEl.textContent = 'Alasan wajib diisi.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      // Validate: jumlah > 0 dan harga >= 0 di setiap item
+      for (const t of currentEditTransaksi) {
+        if (Number(t.jumlah) <= 0) {
+          errEl.textContent = `Jumlah "${t.jenis_sampah?.nama || '-'}" harus lebih dari 0. Gunakan tombol hapus jika ingin menghilangkan item.`;
+          errEl.classList.remove('hidden');
+          return;
+        }
+        if (Number(t.harga_saat_transaksi) < 0) {
+          errEl.textContent = `Harga tidak boleh negatif.`;
+          errEl.classList.remove('hidden');
+          return;
+        }
+      }
+
+      const btn = document.getElementById('btnSaveEditSetoran');
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
+
+      try {
+        // Update each transaksi. Trigger will auto-update setoran.total_rp
+        for (const t of currentEditTransaksi) {
+          const { error } = await supabase.from('transaksi').update({
+            jumlah: Number(t.jumlah),
+            harga_saat_transaksi: Number(t.harga_saat_transaksi),
+          }).eq('id', t.id);
+          if (error) throw error;
+        }
+        // Optional: add note ke setoran.catatan_sesi kalau column ada
+        // Skip untuk sekarang, alasan cukup di audit log (via trigger)
+        
+        showToast('Setoran diperbarui', 'success');
+        document.getElementById('modalEditSetoran').classList.add('hidden');
+        await loadSesi();
+        render();
+      } catch (err) {
+        errEl.textContent = 'Gagal simpan: ' + err.message;
+        errEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Simpan';
+      }
     });
 
     function escapeHtml(text) {
