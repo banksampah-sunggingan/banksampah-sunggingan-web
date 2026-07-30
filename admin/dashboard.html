@@ -3,25 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Admin · Bank Sampah Sunggingan</title>
+  <title>Dashboard · Admin Bank Sampah Sunggingan</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { 'sans': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'] },
-          colors: {
-            'hijau': {
-              50: '#F1F8F3', 100: '#DFF0E4', 200: '#B7DDC1', 300: '#8AC59A',
-              400: '#5FA773', 500: '#3A7D44', 600: '#2D5F3F', 700: '#254D33',
-              800: '#1E3F2A', 900: '#183321',
-            }
-          }
-        }
-      }
-    }
+    tailwind.config = { theme: { extend: { fontFamily: { 'sans': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'] }, colors: { 'hijau': { 50: '#F1F8F3', 100: '#DFF0E4', 200: '#B7DDC1', 300: '#8AC59A', 400: '#5FA773', 500: '#3A7D44', 600: '#2D5F3F', 700: '#254D33', 800: '#1E3F2A', 900: '#183321' } } } } }
   </script>
 </head>
 <body class="font-sans bg-gray-50 min-h-screen">
@@ -34,142 +22,255 @@
   </div>
 
   <div id="mainContent" class="hidden">
-
-    <header class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+      <div class="px-6 py-3 flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-hijau-500 rounded-lg flex items-center justify-center">
-            <span class="text-white font-bold text-sm">BS</span>
-          </div>
-          <div>
-            <div class="font-bold text-hijau-800 text-sm leading-tight">Bank Sampah Sunggingan</div>
-            <div class="text-gray-500 text-xs">Dashboard Admin Desa</div>
-          </div>
+          <div class="w-10 h-10 bg-hijau-500 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">BS</span></div>
+          <div><div class="font-bold text-hijau-800 text-sm leading-tight">Bank Sampah Sunggingan</div><div class="text-gray-500 text-xs">Dashboard Admin Desa</div></div>
         </div>
         <div class="flex items-center gap-4">
-          <div class="text-right">
-            <div class="font-semibold text-gray-800 text-sm" id="userName">-</div>
-            <div class="text-xs text-gray-500" id="userRole">-</div>
-          </div>
-          <button id="logoutBtn" class="text-hijau-700 hover:text-hijau-800 text-sm font-semibold">
+          <div class="text-right"><div class="font-semibold text-gray-800 text-sm" id="userName">-</div><div class="text-xs text-gray-500" id="userRole">-</div></div>
+          <button id="logoutBtn" class="flex items-center gap-1 text-hijau-700 hover:text-hijau-800 hover:bg-hijau-50 px-3 py-2 rounded-lg text-sm font-semibold">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             Keluar
           </button>
         </div>
       </div>
     </header>
 
-    <main class="max-w-6xl mx-auto px-6 py-8">
-      <div class="bg-white rounded-2xl shadow-sm p-8 border border-gray-200">
-        <div class="flex items-center gap-4 mb-6">
-          <div class="w-14 h-14 bg-hijau-100 rounded-full flex items-center justify-center">
-            <span class="text-hijau-700 text-2xl">✓</span>
+    <div class="flex">
+      <aside class="w-60 bg-white border-r border-gray-200 min-h-[calc(100vh-64px)] sticky top-16">
+        <nav class="p-3 space-y-1">
+          <a href="/admin/dashboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-hijau-100 text-hijau-800 font-semibold text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            Dashboard
+          </a>
+          <a href="/admin/rekap-per-rw.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            Rekap per RW
+          </a>
+          <a href="/admin/rekap-pkk.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Rekap PKK Bulanan
+          </a>
+          <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 text-sm cursor-not-allowed">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            Rekap Tahunan <span class="ml-auto text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">soon</span>
           </div>
-          <div>
-            <h1 class="text-2xl font-bold text-gray-800">Selamat Datang, <span id="welcomeName">-</span></h1>
-            <p class="text-gray-500">Anda masuk sebagai administrator desa.</p>
+          <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 text-sm cursor-not-allowed">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            Pencairan Lebaran <span class="ml-auto text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">soon</span>
+          </div>
+          <div class="pt-3 mt-3 border-t border-gray-200">
+            <div class="text-xs font-semibold text-gray-400 uppercase px-3 mb-2">Master Data</div>
+            <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 text-sm cursor-not-allowed">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+              Bank Sampah <span class="ml-auto text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">soon</span>
+            </div>
+            <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 text-sm cursor-not-allowed">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+              Nasabah <span class="ml-auto text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">soon</span>
+            </div>
+          </div>
+          <div class="pt-3 mt-3 border-t border-gray-200">
+            <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 text-sm cursor-not-allowed">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m-7 5h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+              Audit Log <span class="ml-auto text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">soon</span>
+            </div>
+          </div>
+        </nav>
+      </aside>
+
+      <main class="flex-1 p-6">
+        <div class="flex items-center justify-between mb-6">
+          <div><h1 class="text-2xl font-bold text-gray-800">Dashboard Kelurahan</h1><p class="text-sm text-gray-500 mt-0.5">Overview 6 Bank Sampah Sunggingan</p></div>
+          <div class="flex items-center gap-2">
+            <select id="filterBulan" class="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-hijau-500"></select>
+            <select id="filterTahun" class="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-hijau-500"></select>
           </div>
         </div>
 
-        <div class="bg-hijau-50 border border-hijau-200 rounded-lg p-5 mb-6">
-          <p class="text-hijau-800 font-semibold mb-2">🚧 Dashboard Sedang Dibangun</p>
-          <p class="text-hijau-700 text-sm">
-            Fitur dashboard lengkap (rekap per RW, rekap PKK, rekap tahunan, pencairan Lebaran, audit log) akan segera tersedia.
-          </p>
-        </div>
-
-        <div class="border border-gray-200 rounded-lg p-4 mb-4">
-          <h3 class="font-semibold text-gray-800 mb-3">Data 6 Bank Sampah</h3>
-          <div id="bankSampahList" class="space-y-2">
-            <p class="text-sm text-gray-500">Memuat...</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+            <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Total Volume</div>
+            <div class="text-3xl font-bold text-hijau-700" id="metricVolume">0 kg</div>
+            <div class="text-xs text-gray-500 mt-1" id="metricVolumeSubtitle">-</div>
+          </div>
+          <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+            <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Total Nilai</div>
+            <div class="text-3xl font-bold text-hijau-700" id="metricNilai">Rp 0</div>
+            <div class="text-xs text-gray-500 mt-1" id="metricNilaiSubtitle">-</div>
+          </div>
+          <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+            <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Total Setoran</div>
+            <div class="text-3xl font-bold text-hijau-700" id="metricSetoran">0</div>
+            <div class="text-xs text-gray-500 mt-1" id="metricSetoranSubtitle">-</div>
+          </div>
+          <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+            <div class="text-xs font-semibold text-gray-500 uppercase mb-2">Bank Sampah Aktif</div>
+            <div class="text-3xl font-bold text-hijau-700"><span id="metricAktif">0</span> / 6</div>
+            <div class="text-xs text-gray-500 mt-1">Bulan ini</div>
           </div>
         </div>
 
-        <div class="border-t border-gray-200 pt-4">
-          <p class="text-xs text-gray-500 font-semibold mb-2">Info Debug (untuk testing):</p>
-          <pre id="debugInfo" class="text-xs bg-gray-50 p-3 rounded overflow-auto text-gray-700"></pre>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+            <h3 class="font-bold text-gray-800 mb-3">Volume per Bank Sampah (kg)</h3>
+            <div style="height: 280px; position: relative;"><canvas id="chartVolume"></canvas></div>
+          </div>
+          <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+            <h3 class="font-bold text-gray-800 mb-3">Trend 6 Bulan Terakhir (kg)</h3>
+            <div style="height: 280px; position: relative;"><canvas id="chartTrend"></canvas></div>
+          </div>
         </div>
-      </div>
-    </main>
 
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div class="p-5 border-b border-gray-200 flex items-center justify-between">
+            <div><h3 class="font-bold text-gray-800">Rekap per Bank Sampah</h3><p class="text-xs text-gray-500 mt-0.5" id="periodeLabel">-</p></div>
+            <a href="/admin/rekap-per-rw.html" class="text-sm text-hijau-700 hover:text-hijau-800 font-semibold">Lihat Detail →</a>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="text-left px-5 py-3 font-semibold text-gray-600">RW · Bank Sampah</th>
+                  <th class="text-left px-5 py-3 font-semibold text-gray-600">Status</th>
+                  <th class="text-right px-5 py-3 font-semibold text-gray-600">Volume</th>
+                  <th class="text-right px-5 py-3 font-semibold text-gray-600">Nilai</th>
+                  <th class="text-right px-5 py-3 font-semibold text-gray-600">Nasabah</th>
+                  <th class="text-center px-5 py-3 font-semibold text-gray-600">Lapor</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody" class="divide-y divide-gray-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
   </div>
 
   <script type="module">
     import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '/shared/config.js';
+    import { formatRp, namaBulan } from '/shared/utils.js';
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-      auth: { persistSession: true, autoRefreshToken: true }
-    });
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+    let currentBulan = new Date().getMonth() + 1;
+    let currentTahun = new Date().getFullYear();
+    let chartVolumeInstance = null;
+    let chartTrendInstance = null;
 
     async function init() {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        window.location.href = '/login.html';
-        return;
-      }
-
-      const { data: petugas, error } = await supabase
-        .from('petugas')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
-
-      if (error || !petugas) {
-        alert('Data user tidak ditemukan.');
+      if (!session) return window.location.href = '/login.html';
+      const { data: petugas, error } = await supabase.from('petugas').select('*').eq('id', session.user.id).single();
+      if (error || !petugas || !['admin_desa', 'koordinator_pkk'].includes(petugas.role)) {
+        alert('Akses tidak valid.');
         await supabase.auth.signOut();
-        window.location.href = '/login.html';
-        return;
+        return window.location.href = '/login.html';
       }
-
-      if (petugas.role !== 'admin_desa' && petugas.role !== 'koordinator_pkk') {
-        alert('Akun Anda tidak memiliki akses admin.');
-        await supabase.auth.signOut();
-        window.location.href = '/login.html';
-        return;
-      }
-
-      // Populate header
       document.getElementById('userName').textContent = petugas.nama;
-      document.getElementById('welcomeName').textContent = petugas.nama;
       document.getElementById('userRole').textContent = petugas.role === 'admin_desa' ? 'Admin Desa' : 'Koordinator PKK';
-
-      // Load bank sampah list
-      const { data: bankSampahList, error: bsError } = await supabase
-        .from('bank_sampah')
-        .select('*')
-        .order('rw');
-
-      const listContainer = document.getElementById('bankSampahList');
-      if (bsError || !bankSampahList) {
-        listContainer.innerHTML = '<p class="text-sm text-red-600">Gagal memuat data bank sampah.</p>';
-      } else {
-        listContainer.innerHTML = bankSampahList.map(bs => `
-          <div class="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-            <div>
-              <span class="font-semibold text-gray-800">RW ${bs.rw} · ${bs.nama}</span>
-              <span class="ml-2 text-xs px-2 py-0.5 rounded ${bs.status === 'ber_sk' ? 'bg-hijau-100 text-hijau-700' : 'bg-gray-200 text-gray-600'}">${bs.status === 'ber_sk' ? 'Ber-SK' : 'Rintisan'}</span>
-            </div>
-          </div>
-        `).join('');
-      }
-
-      document.getElementById('debugInfo').textContent = JSON.stringify({
-        role: petugas.role,
-        nama: petugas.nama,
-        email: petugas.email,
-        total_bank_sampah: bankSampahList?.length || 0
-      }, null, 2);
-
+      setupFilters();
+      await loadDashboard();
       document.getElementById('loadingState').classList.add('hidden');
       document.getElementById('mainContent').classList.remove('hidden');
     }
 
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-      await supabase.auth.signOut();
-      window.location.href = '/login.html';
-    });
+    function setupFilters() {
+      const bulanSelect = document.getElementById('filterBulan');
+      const tahunSelect = document.getElementById('filterTahun');
+      for (let i = 1; i <= 12; i++) {
+        const opt = document.createElement('option'); opt.value = i; opt.textContent = namaBulan(i);
+        if (i === currentBulan) opt.selected = true;
+        bulanSelect.appendChild(opt);
+      }
+      const thisYear = new Date().getFullYear();
+      for (let y = thisYear - 2; y <= thisYear + 1; y++) {
+        const opt = document.createElement('option'); opt.value = y; opt.textContent = y;
+        if (y === currentTahun) opt.selected = true;
+        tahunSelect.appendChild(opt);
+      }
+      bulanSelect.addEventListener('change', async (e) => { currentBulan = Number(e.target.value); await loadDashboard(); });
+      tahunSelect.addEventListener('change', async (e) => { currentTahun = Number(e.target.value); await loadDashboard(); });
+    }
 
+    async function loadDashboard() {
+      document.getElementById('periodeLabel').textContent = `Periode: ${namaBulan(currentBulan)} ${currentTahun}`;
+      const startDate = new Date(currentTahun, currentBulan - 1, 1).toISOString().split('T')[0];
+      const endDate = new Date(currentTahun, currentBulan, 0).toISOString().split('T')[0];
+      const { data: allBS } = await supabase.from('bank_sampah').select('*').is('deleted_at', null).eq('aktif', true).order('rw');
+      const { data: transaksiData } = await supabase.from('transaksi').select('bank_sampah_id, jumlah, satuan, total_rp, nasabah_id, setoran_id').is('deleted_at', null).gte('created_at', startDate + 'T00:00:00').lte('created_at', endDate + 'T23:59:59');
+      const perBS = {};
+      (allBS || []).forEach(bs => { perBS[bs.id] = { ...bs, totalKg: 0, totalRp: 0, nasabahSet: new Set(), setoranSet: new Set() }; });
+      (transaksiData || []).forEach(t => {
+        if (!perBS[t.bank_sampah_id]) return;
+        if (t.satuan === 'kg') perBS[t.bank_sampah_id].totalKg += Number(t.jumlah || 0);
+        perBS[t.bank_sampah_id].totalRp += Number(t.total_rp || 0);
+        if (t.nasabah_id) perBS[t.bank_sampah_id].nasabahSet.add(t.nasabah_id);
+        if (t.setoran_id) perBS[t.bank_sampah_id].setoranSet.add(t.setoran_id);
+      });
+      const bsArray = Object.values(perBS);
+      const grandKg = bsArray.reduce((s, b) => s + b.totalKg, 0);
+      const grandRp = bsArray.reduce((s, b) => s + b.totalRp, 0);
+      const grandSetoran = bsArray.reduce((s, b) => s + b.setoranSet.size, 0);
+      const bsAktif = bsArray.filter(b => b.setoranSet.size > 0).length;
+      document.getElementById('metricVolume').textContent = grandKg.toFixed(1) + ' kg';
+      document.getElementById('metricVolumeSubtitle').textContent = `Dari ${bsAktif} bank sampah aktif`;
+      document.getElementById('metricNilai').textContent = formatRp(grandRp);
+      document.getElementById('metricNilaiSubtitle').textContent = `Rata-rata ${bsAktif ? formatRp(grandRp/bsAktif) : 'Rp 0'} per bank sampah`;
+      document.getElementById('metricSetoran').textContent = grandSetoran;
+      document.getElementById('metricSetoranSubtitle').textContent = `Total setoran bulan ini`;
+      document.getElementById('metricAktif').textContent = bsAktif;
+      renderChartVolume(bsArray);
+      await renderChartTrend();
+      renderTable(bsArray);
+    }
+
+    function renderChartVolume(bsArray) {
+      const ctx = document.getElementById('chartVolume');
+      if (chartVolumeInstance) chartVolumeInstance.destroy();
+      chartVolumeInstance = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: bsArray.map(b => `RW ${b.rw} ${b.nama}`), datasets: [{ label: 'kg', data: bsArray.map(b => b.totalKg), backgroundColor: '#3A7D44', borderRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 11 } } }, x: { ticks: { font: { size: 10 }, maxRotation: 0 } } } }
+      });
+    }
+
+    async function renderChartTrend() {
+      const labels = []; const values = [];
+      const now = new Date(currentTahun, currentBulan - 1, 1);
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        labels.push(namaBulan(d.getMonth() + 1).substring(0,3) + ' ' + String(d.getFullYear()).slice(2));
+        const s = d.toISOString().split('T')[0];
+        const e = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+        const { data } = await supabase.from('transaksi').select('jumlah, satuan').is('deleted_at', null).eq('satuan', 'kg').gte('created_at', s + 'T00:00:00').lte('created_at', e + 'T23:59:59');
+        const totalKg = (data || []).reduce((sum, t) => sum + Number(t.jumlah || 0), 0);
+        values.push(totalKg);
+      }
+      const ctx = document.getElementById('chartTrend');
+      if (chartTrendInstance) chartTrendInstance.destroy();
+      chartTrendInstance = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'kg', data: values, borderColor: '#3A7D44', backgroundColor: 'rgba(58, 125, 68, 0.1)', tension: 0.35, fill: true, pointBackgroundColor: '#3A7D44', pointRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 11 } } }, x: { ticks: { font: { size: 11 } } } } }
+      });
+    }
+
+    function renderTable(bsArray) {
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+      bsArray.forEach(bs => {
+        const tr = document.createElement('tr'); tr.className = 'hover:bg-gray-50';
+        const status = bs.status === 'ber_sk' ? '<span class="text-xs bg-hijau-100 text-hijau-700 px-2 py-0.5 rounded font-medium">Ber-SK</span>' : '<span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-medium">Rintisan</span>';
+        const lapor = bs.setoranSet.size > 0 ? '<span class="text-xs bg-hijau-100 text-hijau-700 px-2 py-0.5 rounded font-medium">Ada Data</span>' : '<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded font-medium">Belum Lapor</span>';
+        tr.innerHTML = `<td class="px-5 py-3 font-semibold text-gray-800">RW ${bs.rw} · ${bs.nama}</td><td class="px-5 py-3">${status}</td><td class="px-5 py-3 text-right font-semibold text-gray-800">${bs.totalKg.toFixed(1)} kg</td><td class="px-5 py-3 text-right font-semibold text-hijau-700">${formatRp(bs.totalRp)}</td><td class="px-5 py-3 text-right text-gray-800">${bs.nasabahSet.size}</td><td class="px-5 py-3 text-center">${lapor}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => { await supabase.auth.signOut(); window.location.href = '/login.html'; });
     init();
   </script>
-
 </body>
 </html>

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rekap PKK Bulanan · Admin Bank Sampah Sunggingan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { 'sans': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'] }, colors: { 'hijau': { 50: '#F1F8F3', 100: '#DFF0E4', 200: '#B7DDC1', 300: '#8AC59A', 400: '#5FA773', 500: '#3A7D44', 600: '#2D5F3F', 700: '#254D33', 800: '#1E3F2A', 900: '#183321' } } } } }
+  </script>
+</head>
+<body class="font-sans bg-gray-50 min-h-screen">
+
+  <div id="loadingState" class="min-h-screen flex items-center justify-center">
+    <div class="text-center">
+      <div class="w-12 h-12 border-4 border-hijau-200 border-t-hijau-500 rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-hijau-700 font-medium">Memuat data rekap...</p>
+    </div>
+  </div>
+
+  <div id="mainContent" class="hidden">
+    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+      <div class="px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-hijau-500 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">BS</span></div>
+          <div><div class="font-bold text-hijau-800 text-sm leading-tight">Bank Sampah Sunggingan</div><div class="text-gray-500 text-xs">Rekap PKK Bulanan</div></div>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="text-right"><div class="font-semibold text-gray-800 text-sm" id="userName">-</div><div class="text-xs text-gray-500" id="userRole">-</div></div>
+          <button id="logoutBtn" class="flex items-center gap-1 text-hijau-700 hover:text-hijau-800 hover:bg-hijau-50 px-3 py-2 rounded-lg text-sm font-semibold">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Keluar
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="flex">
+      <aside class="w-60 bg-white border-r border-gray-200 min-h-[calc(100vh-64px)] sticky top-16">
+        <nav class="p-3 space-y-1">
+          <a href="/admin/dashboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+            Dashboard
+          </a>
+          <a href="/admin/rekap-per-rw.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-100 text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            Rekap per RW
+          </a>
+          <a href="/admin/rekap-pkk.html" class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-hijau-100 text-hijau-800 font-semibold text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Rekap PKK Bulanan
+          </a>
+        </nav>
+      </aside>
+
+      <main class="flex-1 p-6">
+        <div class="mb-6">
+          <h1 class="text-2xl font-bold text-gray-800">Rekap PKK Bulanan</h1>
+          <p class="text-sm text-gray-500 mt-0.5">Format siap salin ke Google Form Pilah Sampah PKK Kabupaten Kudus</p>
+        </div>
+
+        <div class="bg-hijau-50 border border-hijau-200 rounded-xl p-4 mb-4 flex items-start gap-3">
+          <div class="text-2xl">📋</div>
+          <div class="flex-1">
+            <div class="font-semibold text-hijau-800 mb-1">Panduan Penggunaan</div>
+            <div class="text-sm text-hijau-700">
+              Pilih periode bulan. Klik tombol <strong>Salin</strong> di tiap field untuk copy data. Buka Google Form PKK dan paste ke kolom yang sesuai. Data dihitung otomatis dari transaksi sistem.
+            </div>
+            <div class="mt-2 text-xs text-hijau-600">Mendukung Instruksi Bupati Kudus No. 600.4.14/01/2025 tentang Gerakan Pilah Sampah</div>
+          </div>
+        </div>
+
+        <div id="deadlineAlert" class="hidden bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4">
+          <div class="flex items-start gap-3">
+            <div class="text-2xl">⏰</div>
+            <div>
+              <div class="font-semibold text-yellow-800">Deadline Pelaporan</div>
+              <div class="text-sm text-yellow-700" id="deadlineText">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 mb-6">
+          <label class="text-sm font-semibold text-gray-700">Periode:</label>
+          <select id="filterBulan" class="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-hijau-500"></select>
+          <select id="filterTahun" class="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-hijau-500"></select>
+        </div>
+
+        <div id="cardsContainer" class="grid grid-cols-1 xl:grid-cols-2 gap-4"></div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '/shared/config.js';
+    import { namaBulan, showToast } from '/shared/utils.js';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+    let currentBulan = new Date().getMonth() + 1;
+    let currentTahun = new Date().getFullYear();
+
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return window.location.href = '/login.html';
+      const { data: petugas, error } = await supabase.from('petugas').select('*').eq('id', session.user.id).single();
+      if (error || !petugas || !['admin_desa', 'koordinator_pkk'].includes(petugas.role)) {
+        alert('Akses tidak valid.');
+        await supabase.auth.signOut();
+        return window.location.href = '/login.html';
+      }
+      document.getElementById('userName').textContent = petugas.nama;
+      document.getElementById('userRole').textContent = petugas.role === 'admin_desa' ? 'Admin Desa' : 'Koordinator PKK';
+      setupFilters();
+      updateDeadlineInfo();
+      await loadRekap();
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+    }
+
+    function setupFilters() {
+      const bulanSelect = document.getElementById('filterBulan');
+      const tahunSelect = document.getElementById('filterTahun');
+      for (let i = 1; i <= 12; i++) {
+        const opt = document.createElement('option'); opt.value = i; opt.textContent = namaBulan(i);
+        if (i === currentBulan) opt.selected = true;
+        bulanSelect.appendChild(opt);
+      }
+      const thisYear = new Date().getFullYear();
+      for (let y = thisYear - 2; y <= thisYear + 1; y++) {
+        const opt = document.createElement('option'); opt.value = y; opt.textContent = y;
+        if (y === currentTahun) opt.selected = true;
+        tahunSelect.appendChild(opt);
+      }
+      bulanSelect.addEventListener('change', async (e) => { currentBulan = Number(e.target.value); updateDeadlineInfo(); await loadRekap(); });
+      tahunSelect.addEventListener('change', async (e) => { currentTahun = Number(e.target.value); updateDeadlineInfo(); await loadRekap(); });
+    }
+
+    function updateDeadlineInfo() {
+      const now = new Date();
+      const currentMonthEnd = new Date(currentTahun, currentBulan, 5); // tgl 5 bulan berikutnya
+      const nextMonthName = namaBulan(currentBulan === 12 ? 1 : currentBulan + 1);
+      const nextMonthYear = currentBulan === 12 ? currentTahun + 1 : currentTahun;
+      
+      const alertEl = document.getElementById('deadlineAlert');
+      const textEl = document.getElementById('deadlineText');
+      
+      // Show deadline if reporting current or recent month
+      if (now < currentMonthEnd) {
+        textEl.textContent = `Batas terakhir pelaporan periode ${namaBulan(currentBulan)} ${currentTahun}: 5 ${nextMonthName} ${nextMonthYear}`;
+        alertEl.classList.remove('hidden');
+      } else {
+        alertEl.classList.add('hidden');
+      }
+    }
+
+    async function loadRekap() {
+      const startDate = new Date(currentTahun, currentBulan - 1, 1).toISOString().split('T')[0];
+      const endDate = new Date(currentTahun, currentBulan, 0).toISOString().split('T')[0];
+
+      const { data: allBS } = await supabase.from('bank_sampah').select('*').is('deleted_at', null).eq('aktif', true).order('rw');
+      const { data: transaksiData } = await supabase.from('transaksi').select('bank_sampah_id, jumlah, satuan, nasabah_id').is('deleted_at', null).gte('created_at', startDate + 'T00:00:00').lte('created_at', endDate + 'T23:59:59');
+      const { data: nasabahData } = await supabase.from('nasabah').select('bank_sampah_id, id, is_default').is('deleted_at', null).eq('aktif', true);
+
+      const perBS = {};
+      (allBS || []).forEach(bs => {
+        perBS[bs.id] = { ...bs, totalKg: 0, nasabahAktifSet: new Set(), nasabahTerdaftar: 0 };
+      });
+      (nasabahData || []).forEach(n => {
+        if (perBS[n.bank_sampah_id] && !n.is_default) perBS[n.bank_sampah_id].nasabahTerdaftar++;
+      });
+      (transaksiData || []).forEach(t => {
+        if (!perBS[t.bank_sampah_id]) return;
+        if (t.satuan === 'kg') perBS[t.bank_sampah_id].totalKg += Number(t.jumlah || 0);
+        if (t.nasabah_id) perBS[t.bank_sampah_id].nasabahAktifSet.add(t.nasabah_id);
+      });
+
+      const container = document.getElementById('cardsContainer');
+      container.innerHTML = '';
+      Object.values(perBS).forEach(bs => container.appendChild(makeCard(bs)));
+    }
+
+    function makeCard(bs) {
+      const card = document.createElement('div');
+      card.className = 'bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden';
+      
+      const hasData = bs.totalKg > 0;
+      const statusBadge = hasData 
+        ? '<span class="text-xs bg-hijau-100 text-hijau-700 px-2 py-0.5 rounded font-medium">Ada Data</span>'
+        : '<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded font-medium">Belum Ada Transaksi</span>';
+      
+      const nasabahAktif = bs.nasabahAktifSet.size;
+      const totalKgStr = bs.totalKg.toFixed(2);
+      const allCopyText = `Keberadaan Bank Sampah: Ada\nJumlah nasabah Bank Sampah: ${nasabahAktif}\nBerat/volume sampah anorganik terpilah per bulan: ${totalKgStr} kg`;
+
+      card.innerHTML = `
+        <div class="p-4 bg-gradient-to-r from-hijau-500 to-hijau-600 text-white">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-bold text-lg">RW ${bs.rw} · ${bs.nama}</div>
+              <div class="text-xs text-hijau-100">${bs.status === 'ber_sk' ? 'Ber-SK' : 'Rintisan'} · Ketua: ${bs.ketua_nama || '-'}</div>
+            </div>
+            ${statusBadge}
+          </div>
+        </div>
+        <div class="p-4 space-y-3">
+          <div class="border border-gray-200 rounded-lg p-3">
+            <div class="flex items-center justify-between mb-1">
+              <div class="text-xs font-semibold text-gray-500">Keberadaan Bank Sampah</div>
+              <button data-copy="Ada" class="btn-copy-single text-xs text-hijau-700 hover:text-hijau-800 font-semibold px-2 py-1 border border-hijau-300 rounded hover:bg-hijau-50">Salin</button>
+            </div>
+            <div class="text-base font-bold text-gray-800">Ada</div>
+          </div>
+          <div class="border border-gray-200 rounded-lg p-3">
+            <div class="flex items-center justify-between mb-1">
+              <div class="text-xs font-semibold text-gray-500">Jumlah nasabah Bank Sampah</div>
+              <button data-copy="${nasabahAktif}" class="btn-copy-single text-xs text-hijau-700 hover:text-hijau-800 font-semibold px-2 py-1 border border-hijau-300 rounded hover:bg-hijau-50">Salin</button>
+            </div>
+            <div class="text-base font-bold text-gray-800">${nasabahAktif} nasabah aktif</div>
+            <div class="text-xs text-gray-500 mt-0.5">Dari ${bs.nasabahTerdaftar} nasabah terdaftar (yang bertransaksi bulan ini)</div>
+          </div>
+          <div class="border border-gray-200 rounded-lg p-3">
+            <div class="flex items-center justify-between mb-1">
+              <div class="text-xs font-semibold text-gray-500">Berat/volume sampah anorganik terpilah per bulan</div>
+              <button data-copy="${totalKgStr}" class="btn-copy-single text-xs text-hijau-700 hover:text-hijau-800 font-semibold px-2 py-1 border border-hijau-300 rounded hover:bg-hijau-50">Salin</button>
+            </div>
+            <div class="text-base font-bold text-gray-800">${totalKgStr} kg</div>
+          </div>
+          <button class="btn-copy-all w-full py-2.5 bg-hijau-500 hover:bg-hijau-600 text-white rounded-lg font-semibold text-sm transition" data-copy="${allCopyText.replace(/"/g, '&quot;').replace(/\n/g, '\\n')}">Salin Semua Field (RW ${bs.rw})</button>
+        </div>
+      `;
+
+      card.querySelectorAll('.btn-copy-single').forEach(btn => {
+        btn.addEventListener('click', () => copyToClipboard(btn.dataset.copy, 'Data disalin'));
+      });
+      card.querySelector('.btn-copy-all').addEventListener('click', (e) => {
+        const text = e.currentTarget.dataset.copy.replace(/\\n/g, '\n');
+        copyToClipboard(text, `Semua field RW ${bs.rw} disalin`);
+      });
+      return card;
+    }
+
+    async function copyToClipboard(text, message) {
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast(message, 'success', 2000);
+      } catch (err) {
+        // Fallback for older browsers
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          document.execCommand('copy');
+          showToast(message, 'success', 2000);
+        } catch (e) {
+          showToast('Gagal menyalin. Salin manual.', 'error', 3000);
+        }
+        document.body.removeChild(textarea);
+      }
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => { await supabase.auth.signOut(); window.location.href = '/login.html'; });
+    init();
+  </script>
+</body>
+</html>
