@@ -131,6 +131,9 @@
             <button id="btnHapusSesiClosed" class="hidden py-3 px-6 border-2 border-red-300 text-red-600 rounded-xl font-bold hover:bg-red-50 transition text-sm">
               HAPUS SESI KOSONG
             </button>
+            <button id="btnHapusSesiPenuh" class="hidden py-3 px-6 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition text-sm shadow-sm">
+              HAPUS SEMUA SESI + ISI
+            </button>
             <a href="/petugas/dashboard.html" class="inline-block bg-hijau-500 hover:bg-hijau-600 text-white font-bold px-8 py-3 rounded-xl transition text-base text-center">
               KEMBALI KE DASHBOARD
             </a>
@@ -226,6 +229,43 @@
         </button>
         <button type="button" id="btnConfirmDelete" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold text-sm disabled:opacity-50">
           Hapus
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Hapus Semua Sesi + Isi (NUCLEAR) -->
+  <div id="modalHapusPenuh" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-5 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-2xl">⚠️</span>
+        <h2 class="text-lg font-bold text-red-700">Hapus Semua Data Sesi?</h2>
+      </div>
+      <div class="bg-red-50 border-2 border-red-300 rounded-lg p-3 mb-3 text-sm">
+        <div class="font-bold text-red-800 mb-2">Data berikut akan dihapus:</div>
+        <ul class="space-y-1 text-red-700">
+          <li>• <strong id="hapusPenuhSetoran">-</strong> setoran</li>
+          <li>• <strong id="hapusPenuhTransaksi">-</strong> item transaksi</li>
+          <li>• <strong id="hapusPenuhNasabah">-</strong> nasabah terkait</li>
+          <li class="pt-1 border-t border-red-300 mt-1"><strong>Total nilai: <span id="hapusPenuhTotal">-</span></strong></li>
+        </ul>
+      </div>
+      <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3 text-sm text-yellow-800">
+        <div class="font-semibold mb-1">Perhatian:</div>
+        <div>Saldo nasabah akan otomatis ter-recalculate. Semua penghapusan tercatat di audit log dengan alasan yang Anda berikan. Aksi ini hanya bisa dibatalkan lewat admin desa via database restore.</div>
+      </div>
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-gray-700 mb-1">Alasan <span class="text-red-500">*</span></label>
+        <textarea id="hapusPenuhReason" rows="3" required placeholder="Contoh: Data test cleanup, seluruh sesi salah tanggal, dll"
+          class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
+      </div>
+      <div id="hapusPenuhError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm mb-3"></div>
+      <div class="flex gap-2">
+        <button type="button" id="btnCancelHapusPenuh" class="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 text-sm">
+          Tidak Jadi
+        </button>
+        <button type="button" id="btnConfirmHapusPenuh" class="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-sm disabled:opacity-50">
+          Ya, Hapus Semua
         </button>
       </div>
     </div>
@@ -380,14 +420,17 @@
         statsGrid.className = 'grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-200';
         document.getElementById('bottomActions').classList.add('hidden');
         document.getElementById('closedSesiAction').classList.remove('hidden');
-        // Show Hapus Sesi Kosong button only if 0 setoran
+        // Show Hapus Sesi Kosong or Hapus Semua Sesi based on setoran count
         const btnHapusClosed = document.getElementById('btnHapusSesiClosed');
+        const btnHapusPenuh = document.getElementById('btnHapusSesiPenuh');
         const warningClosed = document.getElementById('warningClosed');
         if (setoranList.length === 0) {
           btnHapusClosed.classList.remove('hidden');
+          btnHapusPenuh.classList.add('hidden');
           warningClosed.classList.add('hidden');
         } else {
           btnHapusClosed.classList.add('hidden');
+          btnHapusPenuh.classList.remove('hidden');
           warningClosed.classList.remove('hidden');
         }
       }
@@ -661,6 +704,79 @@
       render();
       btn.disabled = false;
       btn.textContent = 'Hapus';
+    });
+
+    // ==== HAPUS SEMUA SESI + ISI (NUCLEAR) ====
+    document.getElementById('btnHapusSesiPenuh').addEventListener('click', () => {
+      // Compute statistics
+      const setoranCount = setoranList.length;
+      const transaksiCount = setoranList.reduce((sum, s) => sum + (s.transaksi?.length || 0), 0);
+      const nasabahSet = new Set(setoranList.map(s => s.nasabah_id));
+      const totalRp = setoranList.reduce((sum, s) => sum + Number(s.total_rp || 0), 0);
+
+      document.getElementById('hapusPenuhSetoran').textContent = setoranCount;
+      document.getElementById('hapusPenuhTransaksi').textContent = transaksiCount;
+      document.getElementById('hapusPenuhNasabah').textContent = nasabahSet.size;
+      document.getElementById('hapusPenuhTotal').textContent = formatRp(totalRp);
+      document.getElementById('hapusPenuhReason').value = '';
+      document.getElementById('hapusPenuhError').classList.add('hidden');
+      document.getElementById('modalHapusPenuh').classList.remove('hidden');
+    });
+
+    document.getElementById('btnCancelHapusPenuh').addEventListener('click', () => {
+      document.getElementById('modalHapusPenuh').classList.add('hidden');
+    });
+
+    document.getElementById('btnConfirmHapusPenuh').addEventListener('click', async () => {
+      const reason = document.getElementById('hapusPenuhReason').value.trim();
+      const errEl = document.getElementById('hapusPenuhError');
+      if (!reason || reason.length < 5) {
+        errEl.textContent = 'Alasan wajib diisi (minimal 5 karakter).';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      const btn = document.getElementById('btnConfirmHapusPenuh');
+      btn.disabled = true;
+      btn.textContent = 'Menghapus...';
+
+      const now = new Date().toISOString();
+      const deletePayload = {
+        deleted_at: now,
+        deleted_by: currentPetugas.id,
+        delete_reason: reason,
+      };
+
+      // Collect all IDs
+      const setoranIds = setoranList.map(s => s.id);
+      const transaksiIds = setoranList.flatMap(s => (s.transaksi || []).map(t => t.id));
+
+      try {
+        // Step 1: Delete transaksi (children first)
+        if (transaksiIds.length > 0) {
+          const { error: e1 } = await supabase.from('transaksi').update(deletePayload).in('id', transaksiIds);
+          if (e1) throw new Error('Gagal hapus transaksi: ' + e1.message);
+        }
+
+        // Step 2: Delete setoran (parents)
+        if (setoranIds.length > 0) {
+          const { error: e2 } = await supabase.from('setoran').update(deletePayload).in('id', setoranIds);
+          if (e2) throw new Error('Gagal hapus setoran: ' + e2.message);
+        }
+
+        // Step 3: Delete sesi (grandparent)
+        const { error: e3 } = await supabase.from('sesi_setor').update(deletePayload).eq('id', currentSesi.id);
+        if (e3) throw new Error('Gagal hapus sesi: ' + e3.message);
+
+        showToast('Sesi + semua isinya dihapus', 'success');
+        document.getElementById('modalHapusPenuh').classList.add('hidden');
+        setTimeout(() => { window.location.href = '/petugas/dashboard.html'; }, 800);
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Ya, Hapus Semua';
+      }
     });
 
     // ==== EDIT SETORAN INDIVIDUAL ====
