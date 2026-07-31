@@ -250,7 +250,7 @@
         perNasabah[p.nasabah_id].totalPenarikan += Number(p.jumlah_rp || 0);
       });
 
-      allNasabahData = Object.values(perNasabah).map(n => ({ ...n, saldo: n.totalSetoran - n.totalPenarikan }));
+      allNasabahData = Object.values(perNasabah).map(n => ({ ...n, saldo: Number(n.saldo_awal || 0) + n.totalSetoran - n.totalPenarikan }));
 
       const nasabahAktif = allNasabahData.filter(n => n.setoranCount > 0).length;
       const totalSetoranCount = allNasabahData.reduce((s, n) => s + n.setoranCount, 0);
