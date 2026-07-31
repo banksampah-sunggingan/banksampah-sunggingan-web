@@ -104,6 +104,7 @@
                   <th class="text-right px-5 py-3 font-semibold text-gray-600">Nasabah</th>
                   <th class="text-right px-5 py-3 font-semibold text-gray-600">Volume</th>
                   <th class="text-right px-5 py-3 font-semibold text-gray-600">Nilai</th>
+                  <th class="text-right px-5 py-3 font-semibold text-gray-600">Saldo Kumulatif</th>
                   <th class="text-center px-5 py-3 font-semibold text-gray-600">Detail</th>
                 </tr>
               </thead>
@@ -198,8 +199,30 @@
       const { data: bsData } = await supabase.from('bank_sampah').select('*').is('deleted_at', null).eq('aktif', true).order('rw');
       allBS = bsData || [];
       const { data: transaksiData } = await supabase.from('transaksi').select('bank_sampah_id, jumlah, satuan, total_rp, nasabah_id, setoran_id, jenis_sampah_id').is('deleted_at', null).gte('created_at', startDate + 'T00:00:00').lte('created_at', endDate + 'T23:59:59');
+
+      // Saldo kumulatif all-time per BS (dari view_saldo_nasabah).
+      // Ga ke-affect filter bulan — ini snapshot posisi saldo hari ini,
+      // biar admin bisa cross-check total saldo nasabah tiap BS.
+      const { data: saldoData } = await supabase.from('view_saldo_nasabah')
+        .select('bank_sampah_id, saldo')
+        .eq('is_default', false);
+      const saldoPerBS = {};
+      (saldoData || []).forEach(s => {
+        saldoPerBS[s.bank_sampah_id] = (saldoPerBS[s.bank_sampah_id] || 0) + Number(s.saldo || 0);
+      });
+
       const perBS = {};
-      allBS.forEach(bs => { perBS[bs.id] = { ...bs, totalKg: 0, totalRp: 0, nasabahSet: new Set(), setoranSet: new Set(), transaksi: [] }; });
+      allBS.forEach(bs => {
+        perBS[bs.id] = {
+          ...bs,
+          totalKg: 0,
+          totalRp: 0,
+          saldoKumulatif: saldoPerBS[bs.id] || 0,
+          nasabahSet: new Set(),
+          setoranSet: new Set(),
+          transaksi: []
+        };
+      });
       (transaksiData || []).forEach(t => {
         if (!perBS[t.bank_sampah_id]) return;
         if (t.satuan === 'kg') perBS[t.bank_sampah_id].totalKg += Number(t.jumlah || 0);
@@ -217,7 +240,9 @@
       bsArray.forEach(bs => {
         const tr = document.createElement('tr'); tr.className = 'hover:bg-gray-50';
         const status = bs.status === 'ber_sk' ? '<span class="text-xs bg-hijau-100 text-hijau-700 px-2 py-0.5 rounded font-medium">Ber-SK</span>' : '<span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-medium">Rintisan</span>';
-        tr.innerHTML = `<td class="px-5 py-3 font-semibold text-gray-800">RW ${bs.rw} · ${bs.nama}</td><td class="px-5 py-3">${status}</td><td class="px-5 py-3 text-right text-gray-800">${bs.setoranSet.size}</td><td class="px-5 py-3 text-right text-gray-800">${bs.nasabahSet.size}</td><td class="px-5 py-3 text-right font-semibold text-gray-800">${bs.totalKg.toFixed(1)} kg</td><td class="px-5 py-3 text-right font-semibold text-hijau-700">${formatRp(bs.totalRp)}</td><td class="px-5 py-3 text-center"><button class="btn-detail text-hijau-700 hover:text-hijau-800 font-semibold text-xs" data-id="${bs.id}">Lihat →</button></td>`;
+        // Saldo kumulatif dimerahkan pucat kalau 0 (biar ga distracting), hijau bold kalau ada isi
+        const saldoClass = bs.saldoKumulatif > 0 ? 'font-bold text-hijau-700' : 'text-gray-400';
+        tr.innerHTML = `<td class="px-5 py-3 font-semibold text-gray-800">RW ${bs.rw} · ${bs.nama}</td><td class="px-5 py-3">${status}</td><td class="px-5 py-3 text-right text-gray-800">${bs.setoranSet.size}</td><td class="px-5 py-3 text-right text-gray-800">${bs.nasabahSet.size}</td><td class="px-5 py-3 text-right font-semibold text-gray-800">${bs.totalKg.toFixed(1)} kg</td><td class="px-5 py-3 text-right font-semibold text-hijau-700">${formatRp(bs.totalRp)}</td><td class="px-5 py-3 text-right ${saldoClass}">${formatRp(bs.saldoKumulatif)}</td><td class="px-5 py-3 text-center"><button class="btn-detail text-hijau-700 hover:text-hijau-800 font-semibold text-xs" data-id="${bs.id}">Lihat →</button></td>`;
         tbody.appendChild(tr);
       });
       document.querySelectorAll('.btn-detail').forEach(btn => {

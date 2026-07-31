@@ -265,33 +265,35 @@
       btn.textContent = 'Loading...';
 
       const { data: bsData } = await supabase.from('bank_sampah').select('*').is('deleted_at', null).eq('aktif', true).order('rw');
-      const { data: nasabahAll } = await supabase.from('nasabah').select('*').is('deleted_at', null);
-      const { data: setoranAll } = await supabase.from('setoran').select('nasabah_id, bank_sampah_id, total_rp').is('deleted_at', null);
-      const { data: penarikanAll } = await supabase.from('penarikan').select('nasabah_id, bank_sampah_id, jumlah_rp').is('deleted_at', null);
+
+      // Pake view_saldo_nasabah supaya saldo_awal ke-include otomatis.
+      // View formula: saldo = saldo_awal + total_setoran - total_ditarik
+      // Filter saldo > 0 di server side biar payload lebih kecil.
+      const { data: saldoData } = await supabase.from('view_saldo_nasabah')
+        .select('id, bank_sampah_id, nama, rt, dawis, saldo, is_default')
+        .gt('saldo', 0)
+        .eq('is_default', false);
 
       const perBS = {};
-      (bsData || []).forEach(bs => { perBS[bs.id] = { ...bs, nasabahMap: {} }; });
-      (nasabahAll || []).forEach(n => {
-        if (n.is_default) return;
+      (bsData || []).forEach(bs => { perBS[bs.id] = { ...bs, nasabahList: [] }; });
+      (saldoData || []).forEach(n => {
         if (!perBS[n.bank_sampah_id]) return;
-        perBS[n.bank_sampah_id].nasabahMap[n.id] = { ...n, totalSetoran: 0, totalPenarikan: 0 };
-      });
-      (setoranAll || []).forEach(s => {
-        if (perBS[s.bank_sampah_id]?.nasabahMap[s.nasabah_id]) {
-          perBS[s.bank_sampah_id].nasabahMap[s.nasabah_id].totalSetoran += Number(s.total_rp || 0);
-        }
-      });
-      (penarikanAll || []).forEach(p => {
-        if (perBS[p.bank_sampah_id]?.nasabahMap[p.nasabah_id]) {
-          perBS[p.bank_sampah_id].nasabahMap[p.nasabah_id].totalPenarikan += Number(p.jumlah_rp || 0);
-        }
+        perBS[n.bank_sampah_id].nasabahList.push({
+          id: n.id,
+          nama: n.nama,
+          rt: n.rt,
+          dawis: n.dawis,
+          saldo: Number(n.saldo || 0)
+        });
       });
 
-      // Filter only nasabah with saldo > 0
-      const draft = Object.values(perBS).map(bs => {
-        const nasabahList = Object.values(bs.nasabahMap).map(n => ({ ...n, saldo: n.totalSetoran - n.totalPenarikan })).filter(n => n.saldo > 0).sort((a, b) => b.saldo - a.saldo);
-        return { ...bs, nasabahList, checkedMap: nasabahList.reduce((m, n) => { m[n.id] = true; return m; }, {}) };
-      }).filter(bs => bs.nasabahList.length > 0);
+      // Sort per BS dari saldo terbesar, default all checked
+      const draft = Object.values(perBS)
+        .map(bs => {
+          const nasabahList = bs.nasabahList.sort((a, b) => b.saldo - a.saldo);
+          return { ...bs, nasabahList, checkedMap: nasabahList.reduce((m, n) => { m[n.id] = true; return m; }, {}) };
+        })
+        .filter(bs => bs.nasabahList.length > 0);
 
       draftData = { nama, tanggal, perBS: draft };
 

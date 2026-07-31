@@ -230,10 +230,20 @@
 
       const { data: bsData } = await supabase.from('bank_sampah').select('*').is('deleted_at', null).eq('aktif', true).order('rw');
       allBS = bsData || [];
-      const { data: nasabah } = await supabase.from('nasabah').select('id, bank_sampah_id, nama, rt, dawis, is_default').is('deleted_at', null);
+      const { data: nasabah } = await supabase.from('nasabah').select('id, bank_sampah_id, nama, rt, dawis, is_default, saldo_awal').is('deleted_at', null);
       const { data: setoran } = await supabase.from('setoran').select('nasabah_id, bank_sampah_id, total_rp, tanggal').is('deleted_at', null).gte('tanggal', startDate).lte('tanggal', endDate);
       const { data: transaksi } = await supabase.from('transaksi').select('bank_sampah_id, jumlah, satuan, nasabah_id, setoran_id').is('deleted_at', null).gte('created_at', startDate + 'T00:00:00').lte('created_at', endDate + 'T23:59:59');
       const { data: penarikan } = await supabase.from('penarikan').select('nasabah_id, bank_sampah_id, jumlah_rp, tanggal').is('deleted_at', null).gte('tanggal', startDate).lte('tanggal', endDate);
+
+      // Saldo kumulatif all-time per nasabah (dari view_saldo_nasabah).
+      // View formula: saldo = saldo_awal + total_setoran - total_ditarik
+      // Ini yg dipake untuk kolom "Saldo" — bukan aktivitas tahun ini doang,
+      // supaya nasabah dengan saldo pindahan (misal RW 3) tetep muncul.
+      const { data: saldoView } = await supabase.from('view_saldo_nasabah')
+        .select('id, saldo')
+        .eq('is_default', false);
+      const saldoMap = {};
+      (saldoView || []).forEach(s => { saldoMap[s.id] = Number(s.saldo || 0); });
 
       const perBS = {};
       allBS.forEach(bs => {
@@ -242,7 +252,13 @@
       (nasabah || []).forEach(n => {
         if (n.is_default) return;
         if (!perBS[n.bank_sampah_id]) return;
-        perBS[n.bank_sampah_id].nasabahMap[n.id] = { ...n, setoranCount: 0, totalSetoran: 0, totalPenarikan: 0 };
+        perBS[n.bank_sampah_id].nasabahMap[n.id] = {
+          ...n,
+          setoranCount: 0,
+          totalSetoran: 0,          // aktivitas setoran TAHUN INI (periode filter)
+          totalPenarikan: 0,        // aktivitas penarikan TAHUN INI (periode filter)
+          saldoKumulatif: saldoMap[n.id] || 0   // saldo real all-time (dari view)
+        };
       });
       (setoran || []).forEach(s => {
         if (!perBS[s.bank_sampah_id]) return;
@@ -280,7 +296,11 @@
 
       const bsArray = allData.perBS;
       const grandKg = bsArray.reduce((s, b) => s + b.totalKg, 0);
-      const grandSaldo = bsArray.reduce((s, b) => s + (b.totalSetoran - b.totalPenarikan), 0);
+      // Grand saldo = SUM saldo kumulatif semua nasabah non-default.
+      // Bukan (totalSetoran - totalPenarikan) tahun ini, karena itu miss saldo_awal.
+      const grandSaldo = bsArray.reduce((s, b) =>
+        s + Object.values(b.nasabahMap).reduce((sub, n) => sub + (n.saldoKumulatif || 0), 0)
+      , 0);
       const grandNasabahAktif = bsArray.reduce((s, b) => s + Object.values(b.nasabahMap).filter(n => n.setoranCount > 0).length, 0);
       const grandNasabahTerdaftar = bsArray.reduce((s, b) => s + Object.keys(b.nasabahMap).length, 0);
       const grandBSAktif = bsArray.filter(b => b.totalKg > 0).length;
@@ -327,7 +347,8 @@
         tr.className = 'hover:bg-gray-50';
         const status = bs.status === 'ber_sk' ? '<span class="text-xs bg-hijau-100 text-hijau-700 px-2 py-0.5 rounded font-medium">Ber-SK</span>' : '<span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-medium">Rintisan</span>';
         const nasabahAktif = Object.values(bs.nasabahMap).filter(n => n.setoranCount > 0).length;
-        const saldo = bs.totalSetoran - bs.totalPenarikan;
+        // Saldo per BS = SUM saldo kumulatif semua nasabah di BS ini.
+        const saldo = Object.values(bs.nasabahMap).reduce((s, n) => s + (n.saldoKumulatif || 0), 0);
         tr.innerHTML = `
           <td class="px-5 py-3 font-semibold text-gray-800">RW ${bs.rw} · ${bs.nama}</td>
           <td class="px-5 py-3">${status}</td>
@@ -346,21 +367,28 @@
     function showDetail(bsId) {
       const bs = allData.perBS.find(b => b.id === bsId);
       if (!bs) return;
-      const nasabahList = Object.values(bs.nasabahMap).filter(n => n.totalSetoran > 0 || n.totalPenarikan > 0);
-      nasabahList.forEach(n => { n.saldo = n.totalSetoran - n.totalPenarikan; });
+      // Include nasabah yg: (a) aktivitas tahun ini, ATAU (b) punya saldo kumulatif > 0
+      // Yg (b) penting untuk nampilin nasabah dgn saldo pindahan (misal RW 3) walau blm setor tahun ini.
+      const nasabahList = Object.values(bs.nasabahMap).filter(n =>
+        n.totalSetoran > 0 || n.totalPenarikan > 0 || (n.saldoKumulatif || 0) > 0
+      );
+      // Saldo = kumulatif all-time (dari view), bukan aktivitas tahun ini doang
+      nasabahList.forEach(n => { n.saldo = n.saldoKumulatif || 0; });
       nasabahList.sort((a, b) => b.saldo - a.saldo);
+
+      const bsTotalSaldo = Object.values(bs.nasabahMap).reduce((s, n) => s + (n.saldoKumulatif || 0), 0);
 
       document.getElementById('detailTitle').textContent = `RW ${bs.rw} · Bank Sampah ${bs.nama}`;
       document.getElementById('detailSubtitle').textContent = `Calon penerima pencairan tahun ${currentTahun}`;
       document.getElementById('detailNasabah').textContent = nasabahList.length;
       document.getElementById('detailVolume').textContent = bs.totalKg.toFixed(1) + ' kg';
       document.getElementById('detailSetoran').textContent = formatRp(bs.totalSetoran);
-      document.getElementById('detailSaldo').textContent = formatRp(bs.totalSetoran - bs.totalPenarikan);
+      document.getElementById('detailSaldo').textContent = formatRp(bsTotalSaldo);
 
       const tbody = document.getElementById('nasabahBody');
       tbody.innerHTML = '';
       if (nasabahList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-center text-gray-400 text-sm">Belum ada nasabah dengan transaksi tahun ini.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-center text-gray-400 text-sm">Belum ada nasabah dengan aktivitas atau saldo untuk ditampilkan.</td></tr>';
       } else {
         nasabahList.forEach((n, idx) => {
           const tr = document.createElement('tr');
