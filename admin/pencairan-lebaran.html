@@ -268,21 +268,21 @@
 
       // Pake view_saldo_nasabah supaya saldo_awal ke-include otomatis.
       // View formula: saldo = saldo_awal + total_setoran - total_ditarik
-      // Filter saldo > 0 di server side biar payload lebih kecil.
+      // Filter saldo > 0 di server side — sekaligus skip nasabah default (yg saldo-nya 0).
+      // NOTE: view kolom PK-nya 'nasabah_id' (bukan 'id'), ga punya 'is_default'.
       const { data: saldoData } = await supabase.from('view_saldo_nasabah')
-        .select('id, bank_sampah_id, nama, rt, dawis, saldo, is_default')
-        .gt('saldo', 0)
-        .eq('is_default', false);
+        .select('nasabah_id, bank_sampah_id, nama, rt, saldo')
+        .gt('saldo', 0);
 
       const perBS = {};
       (bsData || []).forEach(bs => { perBS[bs.id] = { ...bs, nasabahList: [] }; });
       (saldoData || []).forEach(n => {
         if (!perBS[n.bank_sampah_id]) return;
         perBS[n.bank_sampah_id].nasabahList.push({
-          id: n.id,
+          id: n.nasabah_id,       // renderDraft & btnFinalEksekusi pake .id sebagai FK ke nasabah
           nama: n.nama,
           rt: n.rt,
-          dawis: n.dawis,
+          dawis: null,            // view ga expose dawis; render fallback ke '-'
           saldo: Number(n.saldo || 0)
         });
       });

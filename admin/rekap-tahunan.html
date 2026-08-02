@@ -239,11 +239,12 @@
       // View formula: saldo = saldo_awal + total_setoran - total_ditarik
       // Ini yg dipake untuk kolom "Saldo" — bukan aktivitas tahun ini doang,
       // supaya nasabah dengan saldo pindahan (misal RW 3) tetep muncul.
+      // NOTE: view kolom PK-nya 'nasabah_id' (bukan 'id'), ga punya 'is_default'.
+      // Nasabah default udah di-skip di loop nasabahMap di bawah (via n.is_default check).
       const { data: saldoView } = await supabase.from('view_saldo_nasabah')
-        .select('id, saldo')
-        .eq('is_default', false);
+        .select('nasabah_id, saldo');
       const saldoMap = {};
-      (saldoView || []).forEach(s => { saldoMap[s.id] = Number(s.saldo || 0); });
+      (saldoView || []).forEach(s => { saldoMap[s.nasabah_id] = Number(s.saldo || 0); });
 
       const perBS = {};
       allBS.forEach(bs => {
