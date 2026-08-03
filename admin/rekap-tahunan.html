@@ -225,8 +225,15 @@
     async function loadData() {
       document.getElementById('tahunLabel').textContent = `Periode: 1 Januari - 31 Desember ${currentTahun}`;
       document.getElementById('detailPanel').classList.add('hidden');
-      const startDate = new Date(currentTahun, 0, 1).toISOString().split('T')[0];
-      const endDate = new Date(currentTahun, 11, 31).toISOString().split('T')[0];
+      // Helper: local date string (fix bug UTC shift)
+      const toLocalDateStr = (d) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      };
+      const startDate = toLocalDateStr(new Date(currentTahun, 0, 1));
+      const endDate = toLocalDateStr(new Date(currentTahun, 11, 31));
 
       const { data: bsData } = await supabase.from('bank_sampah').select('*').is('deleted_at', null).eq('aktif', true).order('rw');
       allBS = bsData || [];
@@ -284,8 +291,8 @@
       // Trend 12 bulan aggregate semua BS
       const monthlyTotal = new Array(12).fill(0);
       for (let m = 0; m < 12; m++) {
-        const mStart = new Date(currentTahun, m, 1).toISOString().split('T')[0];
-        const mEnd = new Date(currentTahun, m + 1, 0).toISOString().split('T')[0];
+        const mStart = toLocalDateStr(new Date(currentTahun, m, 1));
+        const mEnd = toLocalDateStr(new Date(currentTahun, m + 1, 0));
         const monthTxs = (transaksi || []).filter(t => {
           const d = t.setoran_id ? (setoran || []).find(s => s.nasabah_id === t.nasabah_id)?.tanggal : null;
           return t.satuan === 'kg' && d && d >= mStart && d <= mEnd;

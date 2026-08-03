@@ -208,7 +208,12 @@
 
       const thisYear = new Date().getFullYear();
       document.getElementById('fNama').value = `Pencairan Lebaran ${thisYear}`;
-      document.getElementById('fTanggal').value = new Date().toISOString().split('T')[0];
+      // Local date string (fix bug UTC shift saat set default)
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      document.getElementById('fTanggal').value = `${y}-${m}-${day}`;
 
       await loadHistory();
       document.getElementById('loadingState').classList.add('hidden');
