@@ -215,11 +215,11 @@
       const aksi = document.getElementById('filterAksi').value;
 
       let query = supabase.from('audit_log').select('*', { count: 'exact' });
-      if (from) query = query.gte('created_at', from + 'T00:00:00');
-      if (to) query = query.lte('created_at', to + 'T23:59:59');
+      if (from) query = query.gte('timestamp', from + 'T00:00:00');
+      if (to) query = query.lte('timestamp', to + 'T23:59:59');
       if (entity) query = query.eq('entity_type', entity);
       if (aksi) query = query.eq('aksi', aksi);
-      query = query.order('created_at', { ascending: false }).range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
+      query = query.order('timestamp', { ascending: false }).range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
 
       const { data, error, count } = await query;
       if (error) {
@@ -252,8 +252,9 @@
       currentLogs.forEach(log => {
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-gray-50';
-        const time = new Date(log.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-        const userName = petugasMap[log.dibuat_oleh] || '<span class="text-gray-400 italic">System</span>';
+        const time = new Date(log.timestamp).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        // audit_log punya user_nama cached; fallback ke petugasMap untuk kasus null (edge case)
+        const userName = log.user_nama || petugasMap[log.user_id] || '<span class="text-gray-400 italic">System</span>';
         const aksiBadge = getAksiBadge(log.aksi);
         const entityLabel = getEntityLabel(log.entity_type);
         const alasan = log.alasan ? escapeHtml(log.alasan) : '<span class="text-gray-400 italic">-</span>';
@@ -298,8 +299,8 @@
     function showDetail(id) {
       const log = currentLogs.find(l => l.id === id);
       if (!log) return;
-      const time = new Date(log.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-      const userName = petugasMap[log.dibuat_oleh] || 'System';
+      const time = new Date(log.timestamp).toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const userName = log.user_nama || petugasMap[log.user_id] || 'System';
       document.getElementById('detailTitle').textContent = `${log.aksi} · ${getEntityLabel(log.entity_type)}`;
       document.getElementById('detailSubtitle').textContent = `${time} · oleh ${userName}`;
       document.getElementById('detailEntityType').textContent = getEntityLabel(log.entity_type);

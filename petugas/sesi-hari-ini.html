@@ -313,6 +313,14 @@
       auth: { persistSession: true, autoRefreshToken: true }
     });
 
+    // Helper: local date string YYYY-MM-DD (fix timezone bug toISOString shift UTC)
+    const toLocalDateStr = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
     let currentPetugas = null;
     let currentSesi = null;
     let setoranList = [];
@@ -345,7 +353,7 @@
     }
 
     async function loadSesi() {
-      const today = new Date().toISOString().split('T')[0];
+      const today = toLocalDateStr(new Date());
       const { data: sesi } = await supabase
         .from('sesi_setor')
         .select('*')

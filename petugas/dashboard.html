@@ -175,7 +175,10 @@
       document.getElementById('welcomeName').textContent = petugas.nama;
       document.getElementById('bankSampahName').textContent = 'Bank Sampah ' + (petugas.bank_sampah?.nama || '-');
       document.getElementById('welcomeBankSampah').textContent = 'Bank Sampah ' + (petugas.bank_sampah?.nama || '-') + ' · RW ' + (petugas.bank_sampah?.rw || '-');
-      document.getElementById('todayDate').textContent = formatTanggal(new Date().toISOString());
+      // Fix timezone: pake local date string, bukan UTC
+      const _d = new Date();
+      const _localDate = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}`;
+      document.getElementById('todayDate').textContent = formatTanggal(_localDate);
 
       // Load stats
       const bankSampahId = petugas.bank_sampah?.id;
