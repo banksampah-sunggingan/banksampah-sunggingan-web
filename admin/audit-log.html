@@ -188,6 +188,7 @@
     let nasabahMap = {};      // id -> nama
     let jenisMap = {};        // id -> nama
     let bsMap = {};           // id -> "RW X · nama"
+    let sesiMap = {};         // id -> "tanggal (bank sampah)"
 
     // Label field bahasa Indonesia
     const FIELD_LABELS = {
@@ -199,6 +200,7 @@
       nasabah_id: 'Nasabah',
       jenis_sampah_id: 'Jenis Sampah',
       setoran_id: 'Setoran',
+      sesi_setor_id: 'Sesi Setor',
       bank_sampah_id: 'Bank Sampah',
       dibuka_oleh: 'Dibuka Oleh',
       ditutup_oleh: 'Ditutup Oleh',
@@ -280,6 +282,16 @@
 
       const { data: allBS } = await supabase.from('bank_sampah').select('id, nama, rw');
       (allBS || []).forEach(b => { bsMap[b.id] = `RW ${b.rw} · ${b.nama}`; });
+
+      // Sesi setor: include deleted karena audit log bisa reference sesi yg udah soft-deleted
+      const { data: allSesi } = await supabase.from('sesi_setor').select('id, tanggal, bank_sampah_id');
+      (allSesi || []).forEach(s => {
+        const bsName = bsMap[s.bank_sampah_id] || '';
+        const dateStr = new Date(s.tanggal + 'T00:00:00').toLocaleDateString('id-ID', {
+          day: '2-digit', month: 'short', year: 'numeric'
+        });
+        sesiMap[s.id] = bsName ? `${dateStr} · ${bsName}` : dateStr;
+      });
 
       await loadLogs();
       document.getElementById('loadingState').classList.add('hidden');
@@ -382,6 +394,7 @@
       if (key === 'nasabah_id') return nasabahMap[val] ? escapeHtml(nasabahMap[val]) : `<code class="text-xs text-gray-500">${val}</code>`;
       if (key === 'jenis_sampah_id') return jenisMap[val] ? escapeHtml(jenisMap[val]) : `<code class="text-xs text-gray-500">${val}</code>`;
       if (key === 'bank_sampah_id') return bsMap[val] ? escapeHtml(bsMap[val]) : `<code class="text-xs text-gray-500">${val}</code>`;
+      if (key === 'sesi_setor_id') return sesiMap[val] ? escapeHtml(sesiMap[val]) : `<code class="text-xs text-gray-500">${val}</code>`;
       if (['dibuka_oleh', 'ditutup_oleh', 'dibuat_oleh', 'user_id'].includes(key)) {
         return petugasMap[val] ? escapeHtml(petugasMap[val]) : `<code class="text-xs text-gray-500">${val}</code>`;
       }
