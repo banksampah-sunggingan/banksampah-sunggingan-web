@@ -142,17 +142,35 @@
 
         <div id="dataLamaSection">
           <div class="text-sm font-semibold text-gray-700 mb-2">Data Sebelum:</div>
-          <pre class="bg-red-50 border border-red-200 rounded-lg p-3 text-xs overflow-x-auto max-h-64 overflow-y-auto" id="dataLamaJSON">-</pre>
+          <div id="dataLamaHuman">-</div>
         </div>
 
         <div id="dataBaruSection">
           <div class="text-sm font-semibold text-gray-700 mb-2">Data Sesudah:</div>
-          <pre class="bg-hijau-50 border border-hijau-200 rounded-lg p-3 text-xs overflow-x-auto max-h-64 overflow-y-auto" id="dataBaruJSON">-</pre>
+          <div id="dataBaruHuman">-</div>
         </div>
 
         <div id="dataChangesSection" class="hidden">
           <div class="text-sm font-semibold text-gray-700 mb-2">Perubahan:</div>
           <div id="dataChanges" class="space-y-1"></div>
+        </div>
+
+        <!-- Toggle: show JSON raw untuk power user / admin debugging -->
+        <div>
+          <button type="button" id="btnToggleRaw"
+            class="text-xs text-gray-500 hover:text-gray-700 underline">
+            ▸ Tampilkan data mentah (JSON, untuk teknisi)
+          </button>
+          <div id="rawJSONSection" class="hidden mt-2 space-y-2">
+            <div>
+              <div class="text-xs font-semibold text-gray-500 mb-1">Data Lama (JSON):</div>
+              <pre class="bg-gray-50 border border-gray-200 rounded p-2 text-xs overflow-x-auto max-h-40 overflow-y-auto" id="dataLamaJSON">-</pre>
+            </div>
+            <div>
+              <div class="text-xs font-semibold text-gray-500 mb-1">Data Baru (JSON):</div>
+              <pre class="bg-gray-50 border border-gray-200 rounded p-2 text-xs overflow-x-auto max-h-40 overflow-y-auto" id="dataBaruJSON">-</pre>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -167,6 +185,57 @@
     let totalCount = 0;
     let currentLogs = [];
     let petugasMap = {};
+    let nasabahMap = {};      // id -> nama
+    let jenisMap = {};        // id -> nama
+    let bsMap = {};           // id -> "RW X · nama"
+
+    // Label field bahasa Indonesia
+    const FIELD_LABELS = {
+      jumlah: 'Jumlah',
+      satuan: 'Satuan',
+      harga_saat_transaksi: 'Harga saat transaksi',
+      total_rp: 'Total',
+      jumlah_rp: 'Jumlah Rupiah',
+      nasabah_id: 'Nasabah',
+      jenis_sampah_id: 'Jenis Sampah',
+      setoran_id: 'Setoran',
+      bank_sampah_id: 'Bank Sampah',
+      dibuka_oleh: 'Dibuka Oleh',
+      ditutup_oleh: 'Ditutup Oleh',
+      dibuat_oleh: 'Dibuat Oleh',
+      user_id: 'User',
+      nama: 'Nama',
+      rt: 'RT',
+      dawis: 'Dawis',
+      no_hp: 'No. HP',
+      alamat: 'Alamat',
+      catatan: 'Catatan',
+      saldo_awal: 'Saldo Awal',
+      saldo_awal_catatan: 'Catatan Saldo Awal',
+      kategori: 'Kategori',
+      satuan_default: 'Satuan Default',
+      harga_default: 'Harga Default',
+      aktif: 'Aktif',
+      status: 'Status',
+      tanggal: 'Tanggal',
+      jam_mulai: 'Jam Mulai',
+      jam_selesai: 'Jam Selesai',
+      rw: 'RW',
+      no_sk: 'No. SK',
+      tanggal_sk: 'Tanggal SK',
+      ketua_nama: 'Nama Ketua',
+      ketua_no_hp: 'No. HP Ketua',
+      email: 'Email',
+      role: 'Peran',
+      urutan: 'Urutan',
+      is_default: 'Nasabah Default',
+    };
+
+    // Field teknis yang di-hide dari tampilan user (redundant/internal)
+    const SKIP_FIELDS = new Set([
+      'id', 'created_at', 'updated_at', 'deleted_at', 'deleted_by',
+      'delete_reason', 'bank_sampah_id',
+    ]);
 
     function renderSidebar() {
       document.getElementById('sidebar-nav').innerHTML = `
@@ -199,9 +268,18 @@
       document.getElementById('userRole').textContent = petugas.role === 'admin_desa' ? 'Admin Desa' : 'Koordinator PKK';
       renderSidebar();
 
-      // Load petugas map (for user name resolution)
+      // Load semua map untuk resolve foreign keys ke nama human-readable
       const { data: allPetugas } = await supabase.from('petugas').select('id, nama');
       (allPetugas || []).forEach(p => { petugasMap[p.id] = p.nama; });
+
+      const { data: allNasabah } = await supabase.from('nasabah').select('id, nama');
+      (allNasabah || []).forEach(n => { nasabahMap[n.id] = n.nama; });
+
+      const { data: allJenis } = await supabase.from('jenis_sampah').select('id, nama');
+      (allJenis || []).forEach(j => { jenisMap[j.id] = j.nama; });
+
+      const { data: allBS } = await supabase.from('bank_sampah').select('id, nama, rw');
+      (allBS || []).forEach(b => { bsMap[b.id] = `RW ${b.rw} · ${b.nama}`; });
 
       await loadLogs();
       document.getElementById('loadingState').classList.add('hidden');
@@ -296,6 +374,137 @@
       return labels[entity] || entity;
     }
 
+    // ==== HUMAN-READABLE FORMATTER ====
+    function formatFieldValue(key, val) {
+      if (val === null || val === undefined || val === '') return '<span class="text-gray-400 italic">(kosong)</span>';
+
+      // Foreign keys → resolve ke nama
+      if (key === 'nasabah_id') return nasabahMap[val] ? escapeHtml(nasabahMap[val]) : `<code class="text-xs text-gray-500">${val}</code>`;
+      if (key === 'jenis_sampah_id') return jenisMap[val] ? escapeHtml(jenisMap[val]) : `<code class="text-xs text-gray-500">${val}</code>`;
+      if (key === 'bank_sampah_id') return bsMap[val] ? escapeHtml(bsMap[val]) : `<code class="text-xs text-gray-500">${val}</code>`;
+      if (['dibuka_oleh', 'ditutup_oleh', 'dibuat_oleh', 'user_id'].includes(key)) {
+        return petugasMap[val] ? escapeHtml(petugasMap[val]) : `<code class="text-xs text-gray-500">${val}</code>`;
+      }
+      if (key === 'setoran_id') return `<code class="text-xs text-gray-500">${String(val).substring(0, 8)}...</code>`;
+
+      // Boolean
+      if (typeof val === 'boolean') return val ? '<span class="text-hijau-700">✓ Ya</span>' : '<span class="text-gray-500">✗ Tidak</span>';
+
+      // Uang
+      if (['total_rp', 'harga_saat_transaksi', 'harga_default', 'saldo_awal', 'jumlah_rp'].includes(key)) {
+        return `<span class="font-semibold">Rp ${Number(val).toLocaleString('id-ID')}</span>`;
+      }
+
+      // Berat/kuantitas
+      if (key === 'jumlah') return `<span class="font-semibold">${Number(val)}</span>`;
+
+      // Tanggal (DATE)
+      if (key === 'tanggal' || key === 'tanggal_sk') {
+        try {
+          const d = new Date(val + 'T00:00:00');
+          return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+        } catch { return escapeHtml(String(val)); }
+      }
+
+      // Timestamps
+      if (['jam_mulai', 'jam_selesai'].includes(key)) {
+        try {
+          const d = new Date(val);
+          return d.toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        } catch { return escapeHtml(String(val)); }
+      }
+
+      // Enum
+      if (key === 'status') {
+        const badges = {
+          open: '<span class="text-hijau-700 font-semibold">🟢 Open</span>',
+          closed: '<span class="text-gray-600 font-semibold">🔴 Closed</span>',
+          rintisan: '<span class="text-gray-600">Rintisan</span>',
+          ber_sk: '<span class="text-hijau-700 font-semibold">Ber-SK</span>',
+        };
+        return badges[val] || escapeHtml(String(val));
+      }
+      if (key === 'role') {
+        const roles = {
+          petugas_rw: 'Petugas RW',
+          admin_desa: 'Admin Desa',
+          koordinator_pkk: 'Koordinator PKK',
+        };
+        return escapeHtml(roles[val] || String(val));
+      }
+      if (key === 'satuan' || key === 'satuan_default') return escapeHtml(String(val));
+
+      return escapeHtml(String(val));
+    }
+
+    function renderHumanData(data) {
+      if (!data) return '<div class="text-gray-400 italic text-sm">(kosong)</div>';
+
+      const rows = [];
+      Object.entries(data).forEach(([key, val]) => {
+        if (SKIP_FIELDS.has(key)) return;
+        if (val === null || val === undefined || val === '') return; // skip null values
+
+        const label = FIELD_LABELS[key] || key;
+        const formatted = formatFieldValue(key, val);
+        rows.push(`
+          <div class="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100 last:border-b-0">
+            <div class="text-xs font-semibold text-gray-500">${escapeHtml(label)}</div>
+            <div class="col-span-2 text-sm text-gray-800">${formatted}</div>
+          </div>
+        `);
+      });
+
+      return rows.length > 0
+        ? `<div class="bg-white border border-gray-200 rounded-lg p-3">${rows.join('')}</div>`
+        : '<div class="text-gray-400 italic text-sm">(tidak ada field yang relevan)</div>';
+    }
+
+    function renderHumanDiff(dataLama, dataBaru) {
+      const changed = [];
+      const allKeys = new Set([...Object.keys(dataLama || {}), ...Object.keys(dataBaru || {})]);
+
+      allKeys.forEach(key => {
+        if (SKIP_FIELDS.has(key)) return;
+        const oldVal = dataLama ? dataLama[key] : undefined;
+        const newVal = dataBaru ? dataBaru[key] : undefined;
+        // Compare via JSON stringify biar handle number/string equivalents
+        if (JSON.stringify(oldVal ?? null) === JSON.stringify(newVal ?? null)) return;
+        changed.push({ key, oldVal, newVal });
+      });
+
+      if (changed.length === 0) {
+        return '<div class="text-gray-400 italic text-sm">(tidak ada field yang berubah)</div>';
+      }
+
+      const rows = changed.map(({ key, oldVal, newVal }) => {
+        const label = FIELD_LABELS[key] || key;
+        const before = (oldVal === null || oldVal === undefined || oldVal === '')
+          ? '<span class="text-gray-400 italic">(kosong)</span>'
+          : formatFieldValue(key, oldVal);
+        const after = (newVal === null || newVal === undefined || newVal === '')
+          ? '<span class="text-gray-400 italic">(kosong)</span>'
+          : formatFieldValue(key, newVal);
+        return `
+          <div class="py-2 border-b border-gray-100 last:border-b-0">
+            <div class="text-xs font-semibold text-gray-500 mb-1">${escapeHtml(label)}</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+              <div class="bg-red-50 border border-red-200 rounded px-2 py-1.5">
+                <div class="text-xs text-red-600 font-semibold mb-0.5">SEBELUM</div>
+                <div class="text-gray-900">${before}</div>
+              </div>
+              <div class="bg-hijau-50 border border-hijau-200 rounded px-2 py-1.5">
+                <div class="text-xs text-hijau-700 font-semibold mb-0.5">SESUDAH</div>
+                <div class="text-gray-900">${after}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      return `<div class="bg-white border border-gray-200 rounded-lg p-3">${rows.join('')}</div>`;
+    }
+
     function showDetail(id) {
       const log = currentLogs.find(l => l.id === id);
       if (!log) return;
@@ -308,56 +517,62 @@
       document.getElementById('detailAksi').innerHTML = getAksiBadge(log.aksi);
       document.getElementById('detailAlasan').textContent = log.alasan || '-';
 
-      // Show data_lama and data_baru
+      // Section visibility per aksi type
       const dataLamaSec = document.getElementById('dataLamaSection');
       const dataBaruSec = document.getElementById('dataBaruSection');
-      if (log.data_lama) {
-        dataLamaSec.classList.remove('hidden');
-        document.getElementById('dataLamaJSON').textContent = JSON.stringify(log.data_lama, null, 2);
-      } else {
+      const changesSec = document.getElementById('dataChangesSection');
+
+      if (log.aksi === 'CREATE') {
+        // CREATE: cuma tampil Data Sesudah
         dataLamaSec.classList.add('hidden');
-      }
-      if (log.data_baru) {
         dataBaruSec.classList.remove('hidden');
-        document.getElementById('dataBaruJSON').textContent = JSON.stringify(log.data_baru, null, 2);
-      } else {
+        changesSec.classList.add('hidden');
+        document.getElementById('dataBaruHuman').innerHTML = renderHumanData(log.data_baru);
+      } else if (log.aksi === 'UPDATE') {
+        // UPDATE: cuma tampil Perubahan (diff), Data Sebelum/Sesudah hidden
+        dataLamaSec.classList.add('hidden');
         dataBaruSec.classList.add('hidden');
+        changesSec.classList.remove('hidden');
+        document.getElementById('dataChanges').innerHTML = renderHumanDiff(log.data_lama, log.data_baru);
+      } else if (log.aksi === 'DELETE') {
+        // DELETE: cuma tampil Data Sebelum (yang dihapus)
+        dataLamaSec.classList.remove('hidden');
+        dataLamaSec.querySelector('.text-sm.font-semibold').textContent = 'Data yang Dihapus:';
+        dataBaruSec.classList.add('hidden');
+        changesSec.classList.add('hidden');
+        document.getElementById('dataLamaHuman').innerHTML = renderHumanData(log.data_lama);
+      } else {
+        // Fallback: show both if unknown aksi
+        dataLamaSec.classList.remove('hidden');
+        dataBaruSec.classList.remove('hidden');
+        changesSec.classList.add('hidden');
+        document.getElementById('dataLamaHuman').innerHTML = renderHumanData(log.data_lama);
+        document.getElementById('dataBaruHuman').innerHTML = renderHumanData(log.data_baru);
       }
 
-      // Compute diff (for UPDATE only)
-      const changesSec = document.getElementById('dataChangesSection');
-      const changesEl = document.getElementById('dataChanges');
-      if (log.aksi === 'UPDATE' && log.data_lama && log.data_baru) {
-        const changes = [];
-        Object.keys(log.data_baru).forEach(key => {
-          const oldVal = log.data_lama[key];
-          const newVal = log.data_baru[key];
-          if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
-            changes.push({ key, old: oldVal, new: newVal });
-          }
-        });
-        if (changes.length > 0) {
-          changesEl.innerHTML = changes.map(c => `
-            <div class="border border-gray-200 rounded-lg p-2 text-xs">
-              <div class="font-semibold text-gray-800 mb-1">${escapeHtml(c.key)}</div>
-              <div class="grid grid-cols-2 gap-2">
-                <div class="bg-red-50 border border-red-200 rounded p-1.5"><span class="text-red-700">${escapeHtml(String(c.old ?? '(null)'))}</span></div>
-                <div class="bg-hijau-50 border border-hijau-200 rounded p-1.5"><span class="text-hijau-700">${escapeHtml(String(c.new ?? '(null)'))}</span></div>
-              </div>
-            </div>
-          `).join('');
-          changesSec.classList.remove('hidden');
-        } else {
-          changesSec.classList.add('hidden');
-        }
-      } else {
-        changesSec.classList.add('hidden');
-      }
+      // Set raw JSON (hidden by default, toggle-able)
+      document.getElementById('dataLamaJSON').textContent = log.data_lama ? JSON.stringify(log.data_lama, null, 2) : '(kosong)';
+      document.getElementById('dataBaruJSON').textContent = log.data_baru ? JSON.stringify(log.data_baru, null, 2) : '(kosong)';
+      // Reset toggle state (default hidden)
+      document.getElementById('rawJSONSection').classList.add('hidden');
+      document.getElementById('btnToggleRaw').textContent = '▸ Tampilkan data mentah (JSON, untuk teknisi)';
 
       document.getElementById('modalDetail').classList.remove('hidden');
     }
 
     document.getElementById('btnCloseDetail').addEventListener('click', () => document.getElementById('modalDetail').classList.add('hidden'));
+    document.getElementById('btnToggleRaw').addEventListener('click', () => {
+      const sec = document.getElementById('rawJSONSection');
+      const btn = document.getElementById('btnToggleRaw');
+      const isHidden = sec.classList.contains('hidden');
+      if (isHidden) {
+        sec.classList.remove('hidden');
+        btn.textContent = '▾ Sembunyikan data mentah';
+      } else {
+        sec.classList.add('hidden');
+        btn.textContent = '▸ Tampilkan data mentah (JSON, untuk teknisi)';
+      }
+    });
     document.getElementById('btnPrev').addEventListener('click', async () => { if (currentPage > 0) { currentPage--; await loadLogs(); } });
     document.getElementById('btnNext').addEventListener('click', async () => { if ((currentPage + 1) * PAGE_SIZE < totalCount) { currentPage++; await loadLogs(); } });
     document.getElementById('filterFrom').addEventListener('change', async () => { currentPage = 0; await loadLogs(); });
