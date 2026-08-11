@@ -6,6 +6,7 @@
   <meta name="description" content="Sistem digital Bank Sampah Kelurahan Sunggingan, Kudus. Mendukung Gerakan Pilah Sampah PKK.">
   <title>Bank Sampah Sunggingan</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script>
     tailwind.config = {
@@ -79,10 +80,11 @@
       <!-- Hero card visual -->
       <div class="bg-white rounded-2xl shadow-lg p-6 border border-hijau-100">
         <div class="text-hijau-600 font-semibold text-sm mb-1">Rekap Bulan Ini</div>
-        <div class="text-4xl font-extrabold text-hijau-800 mb-1">- kg</div>
-        <div class="text-gray-500 text-sm mb-6">Total sampah terkumpul dari 6 RW</div>
+        <div class="text-4xl font-extrabold text-hijau-800 mb-1" id="totalKgBulanIni">– kg</div>
+        <div class="text-gray-500 text-sm mb-6">Total sampah terkumpul dari <span id="totalBS">6</span> RW</div>
 
-        <div class="space-y-3">
+        <div class="space-y-3" id="rwList">
+          <!-- Diisi oleh script; kalau data fetch fail, tetap tampilkan static placeholder biar landing tidak "kosong" -->
           <div class="flex items-center justify-between p-3 bg-hijau-50 rounded-lg">
             <div>
               <div class="font-semibold text-hijau-800 text-sm">RW 1 · Sinar Barokah</div>
@@ -105,7 +107,7 @@
             <div class="text-hijau-700 font-bold">— kg</div>
           </div>
         </div>
-        <div class="text-center text-xs text-gray-400 mt-4 italic">
+        <div class="text-center text-xs text-gray-400 mt-4 italic" id="rekapCaption">
           Data akan tampil setelah sistem digunakan
         </div>
       </div>
@@ -223,6 +225,87 @@
       </p>
     </div>
   </footer>
+
+  <!-- ============================================================
+       Fetch data real-time untuk hero card
+       Landing page publik (no login) - pake anon key
+       Query: bank_sampah (semua) + transaksi bulan ini (aggregate kg)
+       Graceful degradation: kalau RLS block atau error, tetap tampilkan
+       placeholder static supaya landing ga jadi kosong.
+       ============================================================ -->
+  <script type="module">
+    import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from '/shared/config.js';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+    // Helper: local date string YYYY-MM-DD (bypass bug timezone toISOString UTC shift)
+    const toLocalDateStr = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    // Escape untuk XSS safety saat inject nama BS ke innerHTML
+    const escapeHtml = (text) => {
+      const div = document.createElement('div');
+      div.textContent = text ?? '';
+      return div.innerHTML;
+    };
+
+    async function loadLandingData() {
+      try {
+        // 1 query ke view aggregate — timezone-safe, RLS-safe (anon boleh baca view)
+        const { data, error } = await supabase
+          .from('view_rekap_bulan_ini')
+          .select('bank_sampah_id, rw, nama, status, total_kg')
+          .order('rw');
+
+        if (error) throw error;
+        if (!data || data.length === 0) return; // no BS data, keep static
+
+        const totalKg = data.reduce((sum, row) => sum + Number(row.total_kg || 0), 0);
+
+        // Update UI: total
+        const totalEl = document.getElementById('totalKgBulanIni');
+        totalEl.textContent = totalKg > 0
+          ? totalKg.toFixed(1) + ' kg'
+          : '– kg';
+
+        // Update UI: jumlah BS
+        document.getElementById('totalBS').textContent = data.length;
+
+        // Update UI: list BS (semua BS aktif, urutan RW)
+        const listEl = document.getElementById('rwList');
+        listEl.innerHTML = data.map(bs => {
+          const kg = Number(bs.total_kg || 0);
+          const isBerSK = bs.status === 'ber_sk';
+          const statusLabel = isBerSK ? 'Ber-SK' : 'Rintisan';
+          const statusColor = isBerSK ? 'text-hijau-600' : 'text-gray-500';
+          const kgDisplay = kg > 0 ? kg.toFixed(1) + ' kg' : '— kg';
+          return `
+            <div class="flex items-center justify-between p-3 bg-hijau-50 rounded-lg">
+              <div>
+                <div class="font-semibold text-hijau-800 text-sm">RW ${bs.rw} · ${escapeHtml(bs.nama)}</div>
+                <div class="text-xs ${statusColor}">${statusLabel}</div>
+              </div>
+              <div class="text-hijau-700 font-bold">${kgDisplay}</div>
+            </div>
+          `;
+        }).join('');
+
+        // Hide caption "Data akan tampil..." kalau ada data
+        if (totalKg > 0) {
+          document.getElementById('rekapCaption').classList.add('hidden');
+        }
+      } catch (err) {
+        // Graceful: log error tapi jangan crash landing page
+        console.warn('Landing data fetch failed, keep static placeholder:', err);
+      }
+    }
+
+    loadLandingData();
+  </script>
 
 </body>
 </html>
