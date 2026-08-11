@@ -61,10 +61,11 @@
           <div class="text-2xl">⚠️</div>
           <div class="flex-1">
             <div class="font-bold text-yellow-900 mb-1">Sesi Lama Belum Di-Close</div>
-            <div class="text-sm text-yellow-800" id="orphanWarningText">-</div>
-            <div class="text-xs text-yellow-700 mt-2">
-              Buka halaman <a href="/petugas/sesi-hari-ini.html" class="underline font-semibold">Sesi Hari Ini</a> untuk close sesi lama, atau minta admin bantu via SQL kalau ga bisa.
-            </div>
+            <div class="text-sm text-yellow-800 mb-3" id="orphanWarningText">-</div>
+            <button type="button" id="btnCloseOrphan"
+              class="bg-yellow-600 hover:bg-yellow-700 active:scale-95 text-white text-sm font-bold px-4 py-2 rounded-lg transition">
+              Close Sesi Lama Sekarang
+            </button>
           </div>
         </div>
       </div>
@@ -1105,6 +1106,45 @@
     document.getElementById('modalEditHarga').addEventListener('click', (e) => {
       if (e.target.id === 'modalEditHarga') closeModalEditHarga();
     });
+
+    // Close orphan sesi handler
+    document.getElementById('btnCloseOrphan').addEventListener('click', closeOrphanSesi);
+
+    async function closeOrphanSesi() {
+      if (orphanSesi.length === 0) return;
+
+      const dates = orphanSesi.map(s => formatTanggal(s.tanggal)).join(', ');
+      if (!confirm(`Close ${orphanSesi.length} sesi lama dari tanggal: ${dates}?\n\nData setoran di sesi lama tetap aman.`)) {
+        return;
+      }
+
+      const btn = document.getElementById('btnCloseOrphan');
+      btn.disabled = true;
+      btn.textContent = 'Menutup...';
+
+      const ids = orphanSesi.map(s => s.id);
+      const { error } = await supabase
+        .from('sesi_setor')
+        .update({
+          status: 'closed',
+          jam_selesai: new Date().toISOString(),
+          ditutup_oleh: currentPetugas.id,
+        })
+        .in('id', ids);
+
+      btn.disabled = false;
+      btn.textContent = 'Close Sesi Lama Sekarang';
+
+      if (error) {
+        alert('Gagal close sesi lama: ' + error.message);
+        return;
+      }
+
+      showToast(`${ids.length} sesi lama berhasil di-close`, 'success', 2500);
+      // Refresh state
+      await loadCurrentSesi();
+      renderState();
+    }
 
     document.getElementById('btnMulaiSesi').addEventListener('click', mulaiSesi);
 
