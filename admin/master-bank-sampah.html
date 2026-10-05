@@ -210,11 +210,11 @@
           <div class="p-4 grid grid-cols-2 gap-3 text-sm">
             <div>
               <div class="text-xs text-gray-500 font-semibold mb-1">Ketua</div>
-              <div class="text-gray-800">${bs.ketua_nama ? escapeHtml(bs.ketua_nama) : '<span class="text-gray-400 italic">Belum diisi</span>'}</div>
+              <div class="text-gray-800">${bs.ketua ? escapeHtml(bs.ketua) : '<span class="text-gray-400 italic">Belum diisi</span>'}</div>
             </div>
             <div>
               <div class="text-xs text-gray-500 font-semibold mb-1">No HP Ketua</div>
-              <div class="text-gray-800">${bs.ketua_no_hp ? escapeHtml(bs.ketua_no_hp) : '<span class="text-gray-400 italic">Belum diisi</span>'}</div>
+              <div class="text-gray-800">${bs.no_hp ? escapeHtml(bs.no_hp) : '<span class="text-gray-400 italic">Belum diisi</span>'}</div>
             </div>
             <div>
               <div class="text-xs text-gray-500 font-semibold mb-1">No SK</div>
@@ -249,8 +249,8 @@
       document.getElementById('fNama').value = bs.nama || '';
       document.getElementById('fAlamat').value = bs.alamat || '';
       document.getElementById('fStatus').value = bs.status;
-      document.getElementById('fKetuaNama').value = bs.ketua_nama || '';
-      document.getElementById('fKetuaHP').value = bs.ketua_no_hp || '';
+      document.getElementById('fKetuaNama').value = bs.ketua || '';
+      document.getElementById('fKetuaHP').value = bs.no_hp || '';
       document.getElementById('fNoSK').value = bs.no_sk || '';
       document.getElementById('fTglSK').value = bs.tanggal_sk || '';
       document.getElementById('formError').classList.add('hidden');
@@ -267,8 +267,8 @@
         nama: document.getElementById('fNama').value.trim(),
         alamat: document.getElementById('fAlamat').value.trim() || null,
         status: document.getElementById('fStatus').value,
-        ketua_nama: document.getElementById('fKetuaNama').value.trim() || null,
-        ketua_no_hp: document.getElementById('fKetuaHP').value.trim() || null,
+        ketua: document.getElementById('fKetuaNama').value.trim() || null,
+        no_hp: document.getElementById('fKetuaHP').value.trim() || null,
         no_sk: document.getElementById('fNoSK').value.trim() || null,
         tanggal_sk: document.getElementById('fTglSK').value || null,
       };
